@@ -34,6 +34,6 @@ gulp.task('build', function() {
 });
 
 gulp.task('test', function() {
-	gulp.src('./test/firesync.js')
+	gulp.src('./test/firesync-test.js')
 		.pipe(mocha());
 });

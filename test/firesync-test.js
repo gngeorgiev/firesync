@@ -1,21 +1,24 @@
 'use strict';
 
 var firesync;
+var Firebase;
 
 if (typeof require !== 'undefined') {
     firesync = require('../dist/firesync.js');
     var expect = require('expect.js');
+    Firebase = require('firebase');
 } else {
     firesync = window.firesync;
-    var FiresyncObject = firesync.FiresyncObject;
+    Firebase = window.Firebase;
     mocha.reporter('html');
     mocha.setup('bdd');
 }
 
+var FiresyncObject = firesync.FiresyncObject;
 var ref = new Firebase('https://firesync-tests.firebaseio.com');
 
 describe('Firesync tests', function() {
-    this.timeout(15000);
+    this.timeout(6000);
 
     var testRef;
     var obj;
