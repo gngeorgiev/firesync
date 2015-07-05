@@ -24,6 +24,16 @@ var fail = function (err) {
     throw err;
 };
 
+var handleCb = function (cb) {
+    return function (err) {
+        if (err) {
+            return fail(err);
+        }
+
+        cb();
+    }
+};
+
 describe('Firesync tests', function() {
     this.timeout(10000);
 
@@ -259,11 +269,10 @@ describe('Firesync tests', function() {
                         haha: 1
                     },
                     gosho: [0, 1, 2, 3]
-                }, function () {
+                }, handleCb(function () {
                     firesync.map(testRef)
                         .then(function (_obj) {
                             obj = _obj;
-                            console.log(JSON.stringify(obj));
                             expect(obj).to.be.ok();
                             expect(obj.pesho.haha).to.equal(1);
                             expect(obj.pesho instanceof FiresyncObject);
@@ -272,7 +281,7 @@ describe('Firesync tests', function() {
                             done();
                         })
                         .catch(fail);
-                });
+                }));
             });
 
             it('should create an array of firesync objects', function (done) {
@@ -280,7 +289,7 @@ describe('Firesync tests', function() {
                     pesho: 5
                 }, {
                     gosho: 6
-                }], function () {
+                }], handleCb(function () {
                     firesync.map(testRef)
                         .then(function (_obj) {
                             obj = _obj;
@@ -293,7 +302,7 @@ describe('Firesync tests', function() {
                             done();
                         })
                         .catch(fail);
-                });
+                }));
             });
         });
 
@@ -311,7 +320,7 @@ describe('Firesync tests', function() {
             });
 
             it('should create object with value set', function (done) {
-                testRef.set({testval: 'pesho'}, function () {
+                testRef.set({testval: 'pesho'}, handleCb(function () {
                     firesync.create(testRef)
                         .then(function (_obj) {
                             obj = _obj;
@@ -321,11 +330,11 @@ describe('Firesync tests', function() {
                             done();
                         })
                         .catch(fail);
-                });
+                }));
             });
 
             it('should create array', function (done) {
-                testRef.set([0, 1, 2], function () {
+                testRef.set([0, 1, 2], handleCb(function () {
                     firesync.create(testRef)
                         .then(function (_obj) {
                             obj = _obj;
@@ -338,7 +347,7 @@ describe('Firesync tests', function() {
                             done();
                         })
                         .catch(fail);
-                })
+                }));
             });
         });
     });
