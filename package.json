@@ -1,13 +1,14 @@
 {
   "name": "firesync-node",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "firesync is a library for seamless data synchronization between Firebase and your local data.",
   "main": "dist/firesync.js",
+  "repository": "https://github.com/gngeorgiev/firesync",
   "scripts": {
     "test": "./node_modules/gulp/bin/gulp.js test"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "gngeorgiev.it@gmail.com",
+  "license": "MIT",
   "devDependencies": {
     "babel": "^5.6.14",
     "babel-runtime": "^5.6.15",
