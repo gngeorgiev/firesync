@@ -25,7 +25,7 @@ var fail = function (err) {
 };
 
 describe('Firesync tests', function() {
-    this.timeout(6000);
+    this.timeout(10000);
 
     var testRef;
     var obj;
@@ -245,7 +245,6 @@ describe('Firesync tests', function() {
     });
 
     describe('Util methods', function () {
-
         describe('map', function () {
             it('should create object of firesync objects', function (done) {
                 testRef.set({
