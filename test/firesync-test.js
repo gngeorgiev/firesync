@@ -284,7 +284,7 @@ describe('Firesync tests', function() {
                 }));
             });
 
-            it('should create an array of firesync objects', function (done) {
+            it.skip('should create an array of firesync objects', function (done) {
                 testRef.set([{
                     pesho: 5
                 }, {
