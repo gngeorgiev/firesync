@@ -1,7 +1,7 @@
 # Firesync - Overview
-[![Build Status](https://travis-ci.org/gngeorgiev/firesync.svg?branch=master)](https://travis-ci.org/gngeorgiev/firesync)
-[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
-[![Code Climate](https://codeclimate.com/github/gngeorgiev/firesync/badges/gpa.svg)](https://codeclimate.com/github/gngeorgiev/firesync)
+[![Build Status](https://travis-ci.org/gngeorgiev/firesync.svg?branch=master)](https://travis-ci.org/gngeorgiev/firesync)]
+[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)]
+[![Code Climate](https://codeclimate.com/github/gngeorgiev/firesync/badges/gpa.svg)](https://codeclimate.com/github/gngeorgiev/firesync)]
 ----
 **firesync** is a library for seamless data synchronization between **[Firebase](http://firebase.com)** and your local data.
 
