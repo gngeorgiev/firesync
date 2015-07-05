@@ -14,14 +14,6 @@ if (typeof require !== 'undefined') {
     mocha.setup('bdd');
 }
 
-var ref = new Firebase('https://example.firebaseio.com/users'); // [{name: 'admin'}, {name: 'newUser'}]
-var users = new firesync.FiresyncArray(ref);
-users.once('loaded', function () {
-    //users = [{name: 'admin'}, {name: 'newUser'}]
-    users[0].name === 'admin';
-    users[1].name === 'newUser';
-});
-
 var FiresyncObject = firesync.FiresyncObject;
 var FiresyncArray = firesync.FiresyncArray;
 
