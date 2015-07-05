@@ -9,31 +9,34 @@ var source = require('vinyl-source-stream');
 var rename = require('gulp-rename');
 var exorcist = require('exorcist');
 
-gulp.task('watch', function() {
-	gulp.watch('./src/*.js', ['build']);
+gulp.task('watch', function () {
+    gulp.watch('./src/*.js', ['build']);
 });
 
-gulp.task('watch-test', function() {
-	gulp.watch('./src/*.js', ['build', 'test']);
+gulp.task('watch-test', function () {
+    gulp.watch('./src/*.js', ['build', 'test']);
 });
 
-gulp.task('build', function() {
-	var bundler = browserify({
+gulp.task('build', function () {
+    var bundler = browserify({
         entries: [main],
-		debug: true,
+        debug: true,
         standalone: 'firesync'
-	}).transform(babelify.configure({
-		optional: ['runtime']
-	}));
+    }).transform(babelify.configure({
+        optional: ['runtime']
+    }));
 
     bundler.bundle()
-		.pipe(exorcist('./dist/firesync.js.map'))
+        .pipe(exorcist('./dist/firesync.js.map'))
         .pipe(source(main))
         .pipe(rename('./firesync.js'))
-		.pipe(gulp.dest('./dist'));
+        .pipe(gulp.dest('./dist'));
 });
 
-gulp.task('test', function() {
-	gulp.src('./test/firesync-test.js')
-		.pipe(mocha());
+gulp.task('test', function () {
+    gulp.src('./test/firesync-test.js')
+        .pipe(mocha())
+        .once('end', function () {
+            process.exit();
+        });
 });
