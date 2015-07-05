@@ -23,5 +23,8 @@
     "gulp-rename": "^1.2.2",
     "regeneratorify": "0.0.2",
     "vinyl-source-stream": "^1.1.0"
+  },
+  "dependencies": {
+    "eventemitter2": "^0.4.14"
   }
 }

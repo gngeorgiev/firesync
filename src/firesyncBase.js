@@ -1,10 +1,10 @@
 'use strict';
 
-let EventEmitter = require('events').EventEmitter;
+let EventEmitter2 = require('eventemitter2').EventEmitter2;
 
-const FILTERED_PROPERTIES = ['__$$', '_events', '_maxListeners'];
+const FILTERED_PROPERTIES = ['__$$', '_events', 'newListener'];
 
-class FiresyncBase extends EventEmitter {
+class FiresyncBase extends EventEmitter2 {
     constructor(ref) {
         super();
 
