@@ -14,7 +14,7 @@
 ---
 **firesync** runs equally well in browsers and in node. Since it uses `Object.observe` to watch for local changes a polyfill should be used in environments that do not support it.
 
-# Instalation and usage
+# Installation and usage
 ---
 
 ### bower
