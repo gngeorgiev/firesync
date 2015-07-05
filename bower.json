@@ -1,0 +1,32 @@
+{
+  "name": "firesync",
+  "version": "1.0.0",
+  "homepage": "https://github.com/gngeorgiev/firesync",
+  "authors": [
+    "gngeorgiev <gngeorgiev.it@gmail.com>"
+  ],
+  "description": "firesync is a library for seamless data synchronization between Firebase and your local data.",
+  "main": "dest/firesync.js",
+  "moduleType": [
+    "amd",
+    "es6",
+    "globals",
+    "node"
+  ],
+  "keywords": [
+    "firebase",
+    "sync",
+    "observe",
+    "local",
+    "object",
+    "remote"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

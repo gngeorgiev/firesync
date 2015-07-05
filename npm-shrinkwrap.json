@@ -1,0 +1,11 @@
+{
+  "name": "firesync-node",
+  "version": "1.0.0",
+  "dependencies": {
+    "eventemitter2": {
+      "version": "0.4.14",
+      "from": "eventemitter2@*",
+      "resolved": "https://registry.npmjs.org/eventemitter2/-/eventemitter2-0.4.14.tgz"
+    }
+  }
+}
