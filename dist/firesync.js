@@ -2652,6 +2652,21 @@ var _firesyncObjectJs = require('./firesyncObject.js');
 
 var _firesyncArrayJs = require('./firesyncArray.js');
 
+/**
+ * @class firesync
+ * @classdesc The entry point of firesync.
+ * @global
+ */
+
+/**
+ * Creates a {@link FiresyncObject} or {@link FiresyncArray} from the specified ref depending on the underlying value.
+ * The returned object is guaranteed to be loaded.
+ * @memberof firesync
+ * @param {FirebaseRef} ref from a specified ref
+ * @returns {Promise}
+ * @example firesync.create(ref).then(function(firesyncObj) {}); //if ref's underlying value is array a FiresyncArray is returned
+ * otherwise a FiresyncObject
+ */
 function create(ref) {
     return new _Promise(function (resolve) {
         ref.once('value', function (snap) {
@@ -2672,6 +2687,14 @@ function create(ref) {
     });
 }
 
+/**
+ * Returns a non-synchronized array or an object of {@link FiresyncObject} or {@link FiresyncArray} objects.
+ * The objects are guaranteed to be loaded.
+ * @memberof firesync
+ * @param {FirebaseRef} ref from a specified ref
+ * @returns {Promise}
+ * @example firesync.map(ref).then(function(objOrArr){});
+ */
 function map(ref) {
     return new _Promise(function (resolve) {
         ref.once('value', function (snap) {
@@ -2740,6 +2763,16 @@ Object.defineProperty(exports, '__esModule', {
 
 var _firesyncBaseJs = require('./firesyncBase.js');
 
+/**
+ * @class FiresyncArray
+ * @classdesc An array which keeps its values synchronized with the remote.
+ * One should use the {@link FiresyncArray} methods to manipulate the values.
+ * @protected
+ * @extends FiresyncBase
+ * @example new firesync.FiresyncArray(ref);
+ * @memberof firesync
+ */
+
 var FiresyncArray = (function (_FiresyncBase) {
     function FiresyncArray(ref) {
         var _this = this;
@@ -2759,6 +2792,11 @@ var FiresyncArray = (function (_FiresyncBase) {
 
     _createClass(FiresyncArray, [{
         key: 'val',
+
+        /**
+         * Returns a new non-synchronized array with the user-set values only.
+         * @returns {Array}
+         */
         value: function val() {
             var arr = [];
             var _iteratorNormalCompletion = true;
@@ -2790,16 +2828,35 @@ var FiresyncArray = (function (_FiresyncBase) {
         }
     }, {
         key: 'length',
+
+        /**
+         * Returns the length of the array.
+         * @returns {Number}
+         * @example firesyncArray.add(1); firesyncArray.length() === 1; //true
+         */
         value: function length() {
             return this.__$$.index;
         }
     }, {
         key: 'add',
+
+        /**
+         * Adds a value on the last index of the array.
+         * @param {Object} val The object to add.
+         * @example firesyncArray.add({val:1}); firesyncArray.add(5);
+         */
         value: function add(val) {
             this[this.__$$.index++] = val;
         }
     }, {
         key: 'remove',
+
+        /**
+         * Removes an element from the specified index and keeps the indeces in order.
+         * @param {Number} index The index from which to remove the element.
+         * @example firesyncArray.add(5); firesyncArray.add(6); firesyncArray.add(2);
+         * firesyncArray.remove(1); firesyncArray[1] === 6; //true
+         */
         value: function remove(index) {
             var length = this.length();
             if (index >= 0 && index < length) {
@@ -2839,6 +2896,24 @@ Object.defineProperty(exports, '__esModule', {
 });
 var EventEmitter2 = require('eventemitter2').EventEmitter2;
 
+/**
+ * FirebaseRef object
+ * @external FirebaseRef
+ * @see {@link https://www.firebase.com/docs/web/api/firebase/child.html}
+ */
+
+/**
+ * @class FiresyncBase
+ * @classdesc Base class for all Firesync objects. Any change made to this object will
+ * affect the remote data and any change made on the remote data will affect this object.
+ * Cannot be accessed directly
+ * @private
+ * @fires FiresyncBase#loaded
+ * @fires FiresyncBase#changed
+ * @fires FiresyncBase#synced
+ * @param {FirebaseRef} Ref The ref to which to attach the object to.
+ */
+
 var FiresyncBase = (function (_EventEmitter2) {
     function FiresyncBase(ref) {
         _classCallCheck(this, FiresyncBase);
@@ -2866,21 +2941,41 @@ var FiresyncBase = (function (_EventEmitter2) {
         }
     }, {
         key: 'loaded',
+
+        /**
+         * Indicates whether the object has loaded its data from Firebase.
+         * @returns {boolean}
+         */
         value: function loaded() {
             return this.__$$.loaded;
         }
     }, {
         key: 'ref',
+
+        /**
+         * Returns the ref set in the constructor
+         * @returns {FirebaseRef}
+         */
         value: function ref() {
             return this.__$$.ref;
         }
     }, {
         key: 'detach',
+
+        /**
+         * Detaches from the subscribed events to the {@link FirebaseRef}
+         */
         value: function detach() {
             return this.__$$.ref.off('value', this.__$$.refChangedCb);
         }
     }, {
         key: 'set',
+
+        /**
+         * Applies a value to the object.
+         * @param {object} val
+         * @example firebaseObject.set({value: 1});
+         */
         value: function set(val) {
             return this._setLocal(val);
         }
@@ -2924,11 +3019,24 @@ var FiresyncBase = (function (_EventEmitter2) {
         }
     }, {
         key: '_fireChanged',
+
+        /**
+         * Fired the local object changes, regardless whether it is a result of direct local change
+         * or remote change.
+         * @event FiresyncBase#changed
+         * @example firesyncObject.on('changed', function(){});
+         */
         value: function _fireChanged() {
             this.emit('changed');
         }
     }, {
         key: '_fireLoaded',
+
+        /**
+         * Fired when the initial value of the object is loaded from the remote.
+         * @event FiresyncBase#loaded
+         * @example firesyncObject.on('loaded', function(){});
+         */
         value: function _fireLoaded(val) {
             var _this2 = this;
 
@@ -2953,6 +3061,13 @@ var FiresyncBase = (function (_EventEmitter2) {
         }
     }, {
         key: '_fireSynced',
+
+        /**
+         * Fired when the local object's value is sucesfully set to the remote.
+         * @param {Error} err Synchronization error
+         * @event FiresyncBase#synced
+         * @example firesyncObject.on('synced', function(err){});
+         */
         value: function _fireSynced(err) {
             this.emit('synced', err);
         }
@@ -3091,6 +3206,14 @@ Object.defineProperty(exports, '__esModule', {
 
 var _firesyncBaseJs = require('./firesyncBase.js');
 
+/**
+ * @class FiresyncObject
+ * @classdesc An object which keeps its values synchronized with the remote.
+ * @protected
+ * @extends FiresyncBase
+ * @memberof firesync
+ */
+
 var FiresyncObject = (function (_FiresyncBase) {
     function FiresyncObject(ref) {
         _classCallCheck(this, FiresyncObject);
@@ -3102,6 +3225,11 @@ var FiresyncObject = (function (_FiresyncBase) {
 
     _createClass(FiresyncObject, [{
         key: 'val',
+
+        /**
+         * Returns a new, non-synchronized object with the user-set values only.
+         * @returns {object}
+         */
         value: function val() {
             var obj = {};
             var _iteratorNormalCompletion = true;
