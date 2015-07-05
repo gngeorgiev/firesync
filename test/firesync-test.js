@@ -37,7 +37,14 @@ describe('Firesync tests', function() {
     afterEach(function (done) {
         testRef.remove(done);
         if (obj) {
-            obj.detach();
+            if (typeof obj.detach === 'function') {
+                obj.detach();
+            } else {
+                Object.keys(obj).forEach(function (key) {
+                    obj[key].detach();
+                });
+            }
+
             obj = null;
         }
     });
@@ -319,7 +326,7 @@ describe('Firesync tests', function() {
             it('should create array', function (done) {
                 testRef.set([0, 1, 2], function () {
                     firesync.create(testRef)
-                        .then(function (obj) {
+                        .then(function (_obj) {
                             obj = _obj;
                             expect(obj instanceof FiresyncArray).to.be.ok();
                             expect(obj.length()).to.equal(3);
