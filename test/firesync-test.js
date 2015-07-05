@@ -263,6 +263,7 @@ describe('Firesync tests', function() {
                     firesync.map(testRef)
                         .then(function (_obj) {
                             obj = _obj;
+                            console.log(JSON.stringify(obj));
                             expect(obj).to.be.ok();
                             expect(obj.pesho.haha).to.equal(1);
                             expect(obj.pesho instanceof FiresyncObject);
