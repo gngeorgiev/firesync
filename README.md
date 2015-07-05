@@ -27,6 +27,62 @@
 
 `var firesync = require('firesync-node');`
 
+# Examples
+
+Firesync object synchronized from the database first
+```js
+var ref = new Firebase('https://example.firebaseio.com/users/admin'); // {name: 'admin'}
+var adminUser = new firesync.FiresyncObject(ref);
+
+//the user might have already loaded
+if (!adminUser.loaded()) {
+    //in most cases you would not need to explicitly attach to events
+    adminUser.once('loaded', function () {
+        var name = adminUser.name;
+    
+        adminUser.once('synced', function () {
+            //https://example.firebaseio.com/users/admin now is - {name: '__invalid'}
+        });
+    
+        adminUser.name = '__invalid';
+    });
+}
+```
+
+Firesync object synchronized from local first
+```js
+var ref = new Firebase('https://example.firebaseio.com/users/newUser'); // null
+var newUser = new firesync.FiresyncObject(ref);
+newUser.name = 'newUser';
+newUser.once('synced', function () {
+    //https://example.firebaseio.com/users/newUser now is - {name: 'newUser'}
+});
+```
+
+Firesync array synchronized from database first
+```js
+var ref = new Firebase('https://example.firebaseio.com/users'); // [{name: 'admin'}, {name: 'newUser'}]
+var users = new firesync.FiresyncArray(ref);
+
+//the array can be already loaded
+if (!users.loaded()) {
+    //we do not need to use loaded to add values
+    users.once('loaded', function () {
+        //users = [{name: 'admin'}, {name: 'newUser'}]
+        users[0].name === 'admin';
+        users[1].name === 'newUser';
+        
+        users.add({
+          name: 'newUser2'
+        });
+        
+        //this will immediately push newUser2 to the remote array
+    });
+}
+```
+
+
+
 # API Reference
 ---
 ## Classes
