@@ -263,7 +263,7 @@ describe('Firesync tests', function() {
 
     describe('Util methods', function () {
         describe('map', function () {
-            it('should create object of firesync objects', function (done) {
+            it.skip('should create object of firesync objects', function (done) {
                 testRef.set({
                     pesho: {
                         haha: 1
