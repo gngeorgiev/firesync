@@ -29,6 +29,22 @@
 
 # Examples
 
+Basic
+```js
+var ref = new Firebase('https://example.firebaseio.com/users/admin'); // null
+ref.once('value', function (snap) {
+    var val = snap.val();
+    val.name === 'admin';
+    val.email = 'admin@admin.admin';
+});
+
+var admin = new firesync.FiresyncObject(ref);
+admin.name = 'admin';
+admin.dateCreated = new Date().valueOf().toString();
+admin.email = 'admin@admin.admin';
+//these changes will be automatically synced to the server
+```
+
 Firesync object synchronized from the database first
 ```js
 var ref = new Firebase('https://example.firebaseio.com/users/admin'); // {name: 'admin'}
