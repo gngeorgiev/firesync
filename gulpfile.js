@@ -1,5 +1,3 @@
-var main = require('./package.json').main;
-
 var gulp = require('gulp');
 var browserify = require('browserify');
 var mocha = require('gulp-mocha');
@@ -10,7 +8,7 @@ var rename = require('gulp-rename');
 var exorcist = require('exorcist');
 
 gulp.task('watch', function () {
-    gulp.watch('./src/*.js', ['build']);
+    gulp.watch('./src/*.js', ['build'], {partial: true});
 });
 
 gulp.task('watch:test', function () {
@@ -18,6 +16,8 @@ gulp.task('watch:test', function () {
 });
 
 gulp.task('build', function () {
+    var main = './src/firesync.js';
+
     var bundler = browserify({
         entries: [main],
         debug: true,

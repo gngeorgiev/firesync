@@ -2,7 +2,7 @@
   "name": "firesync",
   "version": "1.0.0",
   "description": "",
-  "main": "src/firesync.js",
+  "main": "dist/firesync.js",
   "scripts": {
     "test": "./node_modules/gulp/bin/gulp.js test"
   },
