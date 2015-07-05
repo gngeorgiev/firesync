@@ -35,7 +35,7 @@ var ref = new Firebase('https://example.firebaseio.com/users/admin'); // null
 ref.once('value', function (snap) {
     var val = snap.val();
     val.name === 'admin';
-    val.email = 'admin@admin.admin';
+    val.email === 'admin@admin.admin';
 });
 
 var admin = new firesync.FiresyncObject(ref);
