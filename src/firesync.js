@@ -1,4 +1,6 @@
 'use strict';
 
 import { FiresyncObject } from './firesyncObject.js';
-export { FiresyncObject }
+import { FiresyncArray } from './firesyncArray.js';
+
+export { FiresyncObject, FiresyncArray }

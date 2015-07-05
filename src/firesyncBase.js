@@ -2,8 +2,6 @@
 
 let EventEmitter2 = require('eventemitter2').EventEmitter2;
 
-const FILTERED_PROPERTIES = ['__$$', '_events', 'newListener'];
-
 class FiresyncBase extends EventEmitter2 {
     constructor(ref) {
         super();
@@ -15,6 +13,7 @@ class FiresyncBase extends EventEmitter2 {
         this.__$$.setRemoteAfterLoad = false;
         this.__$$.suspendObservers = false;
         this.__$$.refChangedCb = null;
+        this.__$$.FILTERED_PROPERTIES = ['__$$', '_events', 'newListener', 'event'];
 
         this._attach();
     }
@@ -35,18 +34,22 @@ class FiresyncBase extends EventEmitter2 {
         return this.__$$.ref.off('value', this.__$$.refChangedCb);
     }
 
+    set(val) {
+        return this._setLocal(val);
+    }
+
     _attach() {
         this.__$$.refChangedCb = (snap) => {
+            let val = snap.val();
+
             if (!this.__$$.loaded) {
                 this.__$$.loaded = true;
-                return this._fireLoaded(snap.val());
+                return this._fireLoaded(val);
             }
 
             if (this.__$$.suspendObservers) {
                 return this.__$$.suspendObservers = false;
             }
-
-            let val = snap.val();
 
             this.__$$.suspendObservers = true;
             this._setLocal(val);
@@ -102,22 +105,10 @@ class FiresyncBase extends EventEmitter2 {
     *_enumerate(obj = this) {
         for (let i in obj) {
             if (obj.hasOwnProperty(i)
-                && FILTERED_PROPERTIES.indexOf(i) === -1) {
+                && this.__$$.FILTERED_PROPERTIES.indexOf(i) === -1) {
                 yield i;
             }
         }
-    }
-
-    _apply(obj, setRemote) {
-        if (this.__$$.applying) {
-            return this.__$$.applying = false;
-        }
-
-        this.__$$.applying = true;
-        this._fireChanged();
-
-        this._clear();
-        this._setLocal(obj, setRemote);
     }
 
     _setRemoteCore() {
@@ -132,6 +123,8 @@ class FiresyncBase extends EventEmitter2 {
     }
 
     _setLocal(obj) {
+        this._clear();
+
         for (let i of this._enumerate(obj)) {
             this[i] = obj[i];
         }

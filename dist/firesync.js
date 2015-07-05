@@ -2641,9 +2641,104 @@ Object.defineProperty(exports, '__esModule', {
 
 var _firesyncObjectJs = require('./firesyncObject.js');
 
-exports.FiresyncObject = _firesyncObjectJs.FiresyncObject;
+var _firesyncArrayJs = require('./firesyncArray.js');
 
-},{"./firesyncObject.js":60}],59:[function(require,module,exports){
+exports.FiresyncObject = _firesyncObjectJs.FiresyncObject;
+exports.FiresyncArray = _firesyncArrayJs.FiresyncArray;
+
+},{"./firesyncArray.js":59,"./firesyncObject.js":61}],59:[function(require,module,exports){
+'use strict';
+
+var _inherits = require('babel-runtime/helpers/inherits')['default'];
+
+var _get = require('babel-runtime/helpers/get')['default'];
+
+var _createClass = require('babel-runtime/helpers/create-class')['default'];
+
+var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
+
+var _getIterator = require('babel-runtime/core-js/get-iterator')['default'];
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+
+var _firesyncBaseJs = require('./firesyncBase.js');
+
+var FiresyncArray = (function (_FiresyncBase) {
+    function FiresyncArray(ref) {
+        _classCallCheck(this, FiresyncArray);
+
+        _get(Object.getPrototypeOf(FiresyncArray.prototype), 'constructor', this).call(this, ref);
+
+        this.__$$.index = 0;
+    }
+
+    _inherits(FiresyncArray, _FiresyncBase);
+
+    _createClass(FiresyncArray, [{
+        key: 'val',
+        value: function val() {
+            var arr = [];
+            var _iteratorNormalCompletion = true;
+            var _didIteratorError = false;
+            var _iteratorError = undefined;
+
+            try {
+                for (var _iterator = _getIterator(this._enumerate()), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                    var i = _step.value;
+
+                    arr.push(this[i]);
+                }
+            } catch (err) {
+                _didIteratorError = true;
+                _iteratorError = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion && _iterator['return']) {
+                        _iterator['return']();
+                    }
+                } finally {
+                    if (_didIteratorError) {
+                        throw _iteratorError;
+                    }
+                }
+            }
+
+            return arr;
+        }
+    }, {
+        key: 'length',
+        value: function length() {
+            return this.__$$.index;
+        }
+    }, {
+        key: 'add',
+        value: function add(val) {
+            this[this.__$$.index++] = val;
+        }
+    }, {
+        key: 'remove',
+        value: function remove(index) {
+            var length = this.length();
+            if (index >= 0 && index < length) {
+                for (var i = index; i < length - 1; i++) {
+                    this[i] = this[i + 1];
+                }
+
+                delete this[length - 1];
+
+                this.__$$.index--;
+            }
+        }
+    }]);
+
+    return FiresyncArray;
+})(_firesyncBaseJs.FiresyncBase);
+
+exports.FiresyncArray = FiresyncArray;
+
+},{"./firesyncBase.js":60,"babel-runtime/core-js/get-iterator":1,"babel-runtime/helpers/class-call-check":8,"babel-runtime/helpers/create-class":9,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11}],60:[function(require,module,exports){
 'use strict';
 
 var _inherits = require('babel-runtime/helpers/inherits')['default'];
@@ -2663,8 +2758,6 @@ Object.defineProperty(exports, '__esModule', {
 });
 var EventEmitter2 = require('eventemitter2').EventEmitter2;
 
-var FILTERED_PROPERTIES = ['__$$', '_events', 'newListener'];
-
 var FiresyncBase = (function (_EventEmitter2) {
     function FiresyncBase(ref) {
         _classCallCheck(this, FiresyncBase);
@@ -2678,6 +2771,7 @@ var FiresyncBase = (function (_EventEmitter2) {
         this.__$$.setRemoteAfterLoad = false;
         this.__$$.suspendObservers = false;
         this.__$$.refChangedCb = null;
+        this.__$$.FILTERED_PROPERTIES = ['__$$', '_events', 'newListener', 'event'];
 
         this._attach();
     }
@@ -2705,21 +2799,26 @@ var FiresyncBase = (function (_EventEmitter2) {
             return this.__$$.ref.off('value', this.__$$.refChangedCb);
         }
     }, {
+        key: 'set',
+        value: function set(val) {
+            return this._setLocal(val);
+        }
+    }, {
         key: '_attach',
         value: function _attach() {
             var _this = this;
 
             this.__$$.refChangedCb = function (snap) {
+                var val = snap.val();
+
                 if (!_this.__$$.loaded) {
                     _this.__$$.loaded = true;
-                    return _this._fireLoaded(snap.val());
+                    return _this._fireLoaded(val);
                 }
 
                 if (_this.__$$.suspendObservers) {
                     return _this.__$$.suspendObservers = false;
                 }
-
-                var val = snap.val();
 
                 _this.__$$.suspendObservers = true;
                 _this._setLocal(val);
@@ -2794,7 +2893,7 @@ var FiresyncBase = (function (_EventEmitter2) {
 
                         i = context$2$0.t1.value;
 
-                        if (!(obj.hasOwnProperty(i) && FILTERED_PROPERTIES.indexOf(i) === -1)) {
+                        if (!(obj.hasOwnProperty(i) && this.__$$.FILTERED_PROPERTIES.indexOf(i) === -1)) {
                             context$2$0.next = 6;
                             break;
                         }
@@ -2813,19 +2912,6 @@ var FiresyncBase = (function (_EventEmitter2) {
             }, _enumerate, this);
         })
     }, {
-        key: '_apply',
-        value: function _apply(obj, setRemote) {
-            if (this.__$$.applying) {
-                return this.__$$.applying = false;
-            }
-
-            this.__$$.applying = true;
-            this._fireChanged();
-
-            this._clear();
-            this._setLocal(obj, setRemote);
-        }
-    }, {
         key: '_setRemoteCore',
         value: function _setRemoteCore() {
             var _this3 = this;
@@ -2843,6 +2929,8 @@ var FiresyncBase = (function (_EventEmitter2) {
     }, {
         key: '_setLocal',
         value: function _setLocal(obj) {
+            this._clear();
+
             var _iteratorNormalCompletion = true;
             var _didIteratorError = false;
             var _iteratorError = undefined;
@@ -2903,7 +2991,7 @@ var FiresyncBase = (function (_EventEmitter2) {
 
 exports.FiresyncBase = FiresyncBase;
 
-},{"babel-runtime/core-js/get-iterator":1,"babel-runtime/helpers/class-call-check":8,"babel-runtime/helpers/create-class":9,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"babel-runtime/regenerator":54,"eventemitter2":57}],60:[function(require,module,exports){
+},{"babel-runtime/core-js/get-iterator":1,"babel-runtime/helpers/class-call-check":8,"babel-runtime/helpers/create-class":9,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"babel-runtime/regenerator":54,"eventemitter2":57}],61:[function(require,module,exports){
 'use strict';
 
 var _inherits = require('babel-runtime/helpers/inherits')['default'];
@@ -2969,6 +3057,6 @@ var FiresyncObject = (function (_FiresyncBase) {
 
 exports.FiresyncObject = FiresyncObject;
 
-},{"./firesyncBase.js":59,"babel-runtime/core-js/get-iterator":1,"babel-runtime/helpers/class-call-check":8,"babel-runtime/helpers/create-class":9,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11}]},{},[58])(58)
+},{"./firesyncBase.js":60,"babel-runtime/core-js/get-iterator":1,"babel-runtime/helpers/class-call-check":8,"babel-runtime/helpers/create-class":9,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11}]},{},[58])(58)
 });
 //# sourceMappingURL=firesync.js.map

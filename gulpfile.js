@@ -13,8 +13,8 @@ gulp.task('watch', function () {
     gulp.watch('./src/*.js', ['build']);
 });
 
-gulp.task('watch-test', function () {
-    gulp.watch('./src/*.js', ['build', 'test']);
+gulp.task('watch:test', function () {
+    gulp.watch(['./src/*.js', './test/*.js'], ['build', 'test'], {partial: true});
 });
 
 gulp.task('build', function () {
