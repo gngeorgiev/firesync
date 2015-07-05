@@ -1,6 +1,11 @@
 #Firesync - Overview
 [![Build Status](https://travis-ci.org/gngeorgiev/firesync.svg?branch=master)](https://travis-ci.org/gngeorgiev/firesync) [![Code Climate](https://codeclimate.com/github/gngeorgiev/firesync/badges/gpa.svg)](https://codeclimate.com/github/gngeorgiev/firesync) [![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
-[![dependencies](https://david-dm.org/gngeorgiev/firesync.svg)]()
+[![dependencies](https://david-dm.org/gngeorgiev/firesync.svg)]() [![version](https://badge.fury.io/js/firesync-node.svg)](http://badge.fury.io/js/firesync-node)
+
+
+[![NPM](https://nodei.co/npm/firesync-node.png)](https://nodei.co/npm/firesync-node/)
+
+
 ---
 **firesync** is a library for seamless data synchronization between **[Firebase](http://firebase.com)** and your local data. When a <a href="#firesync.FiresyncObject">FiresyncObject</a> or <a href="#firesync.FiresyncArray">FiresyncArray</a> is created this object is observed for changes. At the same time the <a href="#external_FirebaseRef">FirebaseRef</a> is also observed. When a change in the one end happens, the data is immediately synchronized to the other end, eliminating the need to explicitly subscribe to events in order to update objects.
 
@@ -17,9 +22,9 @@
 `<script src="bower_components/firesync/dist/firesync.js"></script>`
 
 ###nodejs
-`npm install firesync`
+`npm install firesync-node`
 
-`var firesync = require('firesync');`
+`var firesync = require('firesync-node');`
 
 #API Reference
 ---
