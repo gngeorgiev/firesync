@@ -81,7 +81,50 @@ if (!users.loaded()) {
 }
 ```
 
+Firesync.create - Automatically creates a synchronized object or array based on the underlying firebase value. The created
+objects are guaranteed to be loaded.
+```js
+var ref = new Firebase('https://example.firebaseio.com/users/fred'); //{name: 'fred'}
+firesync.create(ref)
+    .then(function (firesyncObj) {
+        firesyncObj.name === 'fred';
+        firesyncObj.loaded() === true;
+    });
+    
+var usersRef = new Firebase('https://example.firebaseio.com/users'); //[{name: 'admin'}, {name: 'fred'}];
+firesync.create(usersRef)
+    .then(function (firesyncArr) {
+        firesyncArr.lenght() === 2;
+        firesyncArr.loaded() === true;
+        firesyncArr[0].name === 'admin';
+    });
 
+```
+
+Firesync.map - Returns a non-synchronized object or array, depending on the underlying firebase value. Each object in the
+returned object/array is a synchronized <a href="#firesync.FiresyncObject">FiresyncObject</a> or <a href="#firesync.FiresyncArray">FiresyncArray</a>
+depending on the underlying firebase value. The objects are guaranteed to be loaded.
+```js
+    var usersRef = new Firebase('https://example.firebaseio.com/users'); //[{name: 'admin'}, {name: 'fred'}];
+    firesync.map(usersRef)
+        .then(function (arr) {
+            Array.isArray(arr) === true;
+            arr[0] instanceof firesync.FiresyncObject === true;
+            arr[1] instanceof firesync.FiresyncObject === true;
+            
+            //changes to arr will not reflect the changes to the remote data, but changing any of the inner objects will
+        });
+        
+    var someRef = new Firebase('https://example.firebaseio.com/someRef'); //{someObj: {name: 'admin'}, someArr: [1, 2]};
+    firesync.map(someRef)
+        .then(function (obj) {
+            typeof obj === 'object';
+            obj.someObj instanceof firesync.FiresyncObject;
+            obj.someArr instanceof firesync.FiresyncArray;
+            
+            //changes to obj will not reflect the changes to the remote data, but changing any of the inner objects will
+        });
+```
 
 # API Reference
 ---
@@ -120,6 +163,8 @@ The entry point of firesync.
     * ["changed"](#FiresyncBase+event_changed)
     * ["loaded"](#FiresyncBase+event_loaded)
     * ["synced" (err)](#FiresyncBase+event_synced)
+  * [.create(ref)](#firesync.create) ⇒ <code>Promise</code>
+  * [.map(ref)](#firesync.map) ⇒ <code>Promise</code>
 
 <a name="firesync.FiresyncArray"></a>
 ### firesync.FiresyncArray ⇐ <code>[FiresyncBase](#new_FiresyncBase_new)</code>
@@ -199,7 +244,7 @@ Fired when the local object's value is sucesfully set to the remote.
 
 **Example**  
 ```js
-firesyncObject.on('synced', function(){});
+firesyncObject.on('synced', function(err){});
 ```
 <a name="firesync.FiresyncObject"></a>
 ### firesync.FiresyncObject ⇐ <code>[FiresyncBase](#new_FiresyncBase_new)</code>
@@ -278,14 +323,45 @@ Fired when the local object's value is sucesfully set to the remote.
 
 **Example**  
 ```js
-firesyncObject.on('synced', function(){});
+firesyncObject.on('synced', function(err){});
+```
+<a name="firesync.create"></a>
+### firesync.create(ref) ⇒ <code>Promise</code>
+Creates a [FiresyncObject](FiresyncObject) or [FiresyncArray](FiresyncArray) from the specified ref depending on the underlying value.
+The returned object is guaranteed to be loaded.
+
+**Kind**: static method of <code>[firesync](#firesync)</code>  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ref | <code>FirebaseRef</code> | from a specified ref |
+
+**Example**  
+```js
+firesync.create(ref).then(function(firesyncObj) {}); //if ref's underlying value is array a FiresyncArray is returned
+otherwise a FiresyncObject
+```
+<a name="firesync.map"></a>
+### firesync.map(ref) ⇒ <code>Promise</code>
+Returns a non-synchronized array or an object of [FiresyncObject](FiresyncObject) or [FiresyncArray](FiresyncArray) objects.
+The objects are guaranteed to be loaded.
+
+**Kind**: static method of <code>[firesync](#firesync)</code>  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ref | <code>FirebaseRef</code> | from a specified ref |
+
+**Example**  
+```js
+firesync.map(ref).then(function(objOrArr){});
 ```
 <a name="external_FirebaseRef"></a>
 ## FirebaseRef
 FirebaseRef object
 
 **Kind**: global external  
-**See**: [https://www.firebase.com/docs/web/api/firebase/child.html](https://www.firebase.com/docs/web/api/firebase/child.html)  
+**See**: [https://www.firebase.com/docs/web/api/firebase/child.html](https://www.firebase.com/docs/web/api/firebase/child.html)   
 
 # License
 ---

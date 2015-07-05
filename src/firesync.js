@@ -9,6 +9,15 @@ import { FiresyncArray } from './firesyncArray.js';
  * @global
  */
 
+/**
+ * Creates a {@link FiresyncObject} or {@link FiresyncArray} from the specified ref depending on the underlying value.
+ * The returned object is guaranteed to be loaded.
+ * @memberof firesync
+ * @param {FirebaseRef} ref from a specified ref
+ * @returns {Promise}
+ * @example firesync.create(ref).then(function(firesyncObj) {}); //if ref's underlying value is array a FiresyncArray is returned
+ * otherwise a FiresyncObject
+ */
 function create(ref) {
     return new Promise((resolve) => {
         ref.once('value', (snap) => {
@@ -29,6 +38,14 @@ function create(ref) {
     });
 }
 
+/**
+ * Returns a non-synchronized array or an object of {@link FiresyncObject} or {@link FiresyncArray} objects.
+ * The objects are guaranteed to be loaded.
+ * @memberof firesync
+ * @param {FirebaseRef} ref from a specified ref
+ * @returns {Promise}
+ * @example firesync.map(ref).then(function(objOrArr){});
+ */
 function map(ref) {
     return new Promise((resolve) => {
         ref.once('value', (snap) => {
