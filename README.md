@@ -1,10 +1,10 @@
 # Firesync - Overview
 [![Build Status](https://travis-ci.org/gngeorgiev/firesync.svg?branch=master)](https://travis-ci.org/gngeorgiev/firesync) [![Code Climate](https://codeclimate.com/github/gngeorgiev/firesync/badges/gpa.svg)](https://codeclimate.com/github/gngeorgiev/firesync) [![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
-----
+---
 **firesync** is a library for seamless data synchronization between **[Firebase](http://firebase.com)** and your local data.
 
 #API Reference
-----
+---
 ## Classes
 <dl>
 <dt><a href="#firesync">firesync</a></dt>
@@ -208,7 +208,7 @@ FirebaseRef object
 **See**: [https://www.firebase.com/docs/web/api/firebase/child.html](https://www.firebase.com/docs/web/api/firebase/child.html)  
 
 #License
-----
+---
 The MIT License (MIT)
 
 Copyright (c) 2015 Firesync
