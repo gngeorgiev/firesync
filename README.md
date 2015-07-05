@@ -1,8 +1,25 @@
-# Firesync - Overview
+#Firesync - Overview
 [![Build Status](https://travis-ci.org/gngeorgiev/firesync.svg?branch=master)](https://travis-ci.org/gngeorgiev/firesync) [![Code Climate](https://codeclimate.com/github/gngeorgiev/firesync/badges/gpa.svg)](https://codeclimate.com/github/gngeorgiev/firesync) [![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
 [![dependencies](https://david-dm.org/gngeorgiev/firesync.svg)]()
 ---
-**firesync** is a library for seamless data synchronization between **[Firebase](http://firebase.com)** and your local data.
+**firesync** is a library for seamless data synchronization between **[Firebase](http://firebase.com)** and your local data. When a <a href="#firesync.FiresyncObject">FiresyncObject</a> or <a href="#firesync.FiresyncArray">FiresyncArray</a> is created this object is observed for changes. At the same time the <a href="#external_FirebaseRef">FirebaseRef</a> is also observed. When a change in the one end happens, the data is immediately synchronized to the other end, eliminating the need to explicitly subscribe to events in order to update objects.
+
+#Requirements
+---
+**firesync** runs equally well in browsers and in node. Since it uses `Object.observe` to watch for local changes a polyfill should be used in environments that do not support it.
+
+#Instalation and usage
+---
+
+###bower
+`bower install firesync`
+
+`<script src="bower_components/firesync/dist/firesync.js"></script>`
+
+###nodejs
+`npm install firesync`
+
+`var firesync = require('firesync');`
 
 #API Reference
 ---
