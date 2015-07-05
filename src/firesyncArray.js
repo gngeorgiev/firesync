@@ -7,6 +7,10 @@ class FiresyncArray extends FiresyncBase {
         super(ref);
 
         this.__$$.index = 0;
+
+        this.once('loaded', () => {
+            this.__$$.index = this.val().length;
+        });
     }
 
     val() {

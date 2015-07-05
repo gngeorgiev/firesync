@@ -19,6 +19,11 @@ var FiresyncArray = firesync.FiresyncArray;
 
 var ref = new Firebase('https://firesync-tests.firebaseio.com');
 
+var fail = function (err) {
+    console.log(err);
+    throw err;
+};
+
 describe('Firesync tests', function() {
     this.timeout(6000);
 
@@ -236,6 +241,93 @@ describe('Firesync tests', function() {
             expect(obj[1]).to.equal(2);
             expect(obj[2]).to.equal(3);
             expect(obj[3]).to.equal(4);
+        });
+    });
+
+    describe('Util methods', function () {
+
+        describe('map', function () {
+            it('should create object of firesync objects', function (done) {
+                testRef.set({
+                    pesho: {
+                        haha: 1
+                    },
+                    gosho: [0, 1, 2, 3]
+                }, function () {
+                    firesync.map(testRef)
+                        .then(function (obj) {
+                            expect(obj).to.be.ok();
+                            expect(obj.pesho.haha).to.equal(1);
+                            expect(obj.pesho instanceof FiresyncObject);
+                            expect(obj.gosho.length()).to.equal(4);
+                            expect(obj.gosho instanceof FiresyncArray);
+                            done();
+                        })
+                        .catch(fail);
+                });
+            });
+
+            it('should create an array of firesync objects', function (done) {
+                testRef.set([{
+                    pesho: 5
+                }, {
+                    gosho: 6
+                }], function () {
+                    firesync.map(testRef)
+                        .then(function (arr) {
+                            expect(arr).to.be.ok();
+                            expect(arr.length).to.equal(2);
+                            expect(arr[0].pesho).to.equal(5);
+                            expect(arr[0] instanceof FiresyncObject);
+                            expect(arr[1].gosho).to.equal(6);
+                            expect(arr[1] instanceof FiresyncObject);
+                            done();
+                        })
+                        .catch(fail);
+                });
+            });
+        });
+
+        describe('create', function () {
+            it('should create object when no value is set', function (done) {
+                testRef.remove(function () {
+                    firesync.create(testRef)
+                        .then(function (obj) {
+                            expect(obj instanceof FiresyncObject).to.be.ok();
+                            done();
+                        })
+                        .catch(fail);
+                });
+            });
+
+            it('should create object with value set', function (done) {
+                testRef.set({testval: 'pesho'}, function () {
+                    firesync.create(testRef)
+                        .then(function (obj) {
+                            expect(obj instanceof FiresyncObject).to.be.ok();
+                            expect(obj.testval).to.equal('pesho');
+                            expect(obj.loaded()).to.be.ok();
+                            done();
+                        })
+                        .catch(fail);
+                });
+            });
+
+            it('should create array', function (done) {
+                testRef.set([0, 1, 2], function () {
+                    firesync.create(testRef)
+                        .then(function (arr) {
+                            expect(arr instanceof FiresyncArray).to.be.ok();
+                            expect(arr.length()).to.equal(3);
+                            expect(arr.loaded()).to.be.ok();
+                            expect(arr[0]).to.equal(0);
+                            expect(arr[1]).to.equal(1);
+                            expect(arr[2]).to.equal(2);
+                            done();
+                        })
+                        .catch(fail);
+                })
+            });
         });
     });
 });
