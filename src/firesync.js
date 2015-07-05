@@ -3,6 +3,12 @@
 import { FiresyncObject } from './firesyncObject.js';
 import { FiresyncArray } from './firesyncArray.js';
 
+/**
+ * @class firesync
+ * @classdesc The entry point of firesync.
+ * @global
+ */
+
 function create(ref) {
     return new Promise((resolve) => {
         ref.once('value', (snap) => {

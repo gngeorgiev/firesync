@@ -2,6 +2,23 @@
 
 let EventEmitter2 = require('eventemitter2').EventEmitter2;
 
+/**
+ * FirebaseRef object
+ * @external FirebaseRef
+ * @see {@link https://www.firebase.com/docs/web/api/firebase/child.html}
+ */
+
+/**
+ * @class FiresyncBase
+ * @classdesc Base class for all Firesync objects. Any change made to this object will
+ * affect the remote data and any change made on the remote data will affect this object.
+ * Cannot be accessed directly
+ * @private
+ * @fires FiresyncBase#loaded
+ * @fires FiresyncBase#changed
+ * @fires FiresyncBase#synced
+ * @param {FirebaseRef} Ref The ref to which to attach the object to.
+ */
 class FiresyncBase extends EventEmitter2 {
     constructor(ref) {
         super();
@@ -22,18 +39,34 @@ class FiresyncBase extends EventEmitter2 {
         throw new Error('val is not implemented');
     }
 
+    /**
+     * Indicates whether the object has loaded its data from Firebase.
+     * @returns {boolean}
+     */
     loaded() {
         return this.__$$.loaded;
     }
 
+    /**
+     * Returns the ref set in the constructor
+     * @returns {FirebaseRef}
+     */
     ref() {
         return this.__$$.ref;
     }
 
+    /**
+     * Detaches from the subscribed events to the {@link FirebaseRef}
+     */
     detach() {
         return this.__$$.ref.off('value', this.__$$.refChangedCb);
     }
 
+    /**
+     * Applies a value to the object.
+     * @param {object} val
+     * @example firebaseObject.set({value: 1});
+     */
     set(val) {
         return this._setLocal(val);
     }
@@ -73,10 +106,21 @@ class FiresyncBase extends EventEmitter2 {
         });
     }
 
+    /**
+     * Fired the local object changes, regardless whether it is a result of direct local change
+     * or remote change.
+     * @event FiresyncBase#changed
+     * @example firesyncObject.on('changed', function(){});
+     */
     _fireChanged() {
         this.emit('changed');
     }
 
+    /**
+     * Fired when the initial value of the object is loaded from the remote.
+     * @event FiresyncBase#loaded
+     * @example firesyncObject.on('loaded', function(){});
+     */
     _fireLoaded(val) {
         if (this.__$$.setRemoteAfterLoad) {
             this._setRemoteCore();
@@ -98,6 +142,12 @@ class FiresyncBase extends EventEmitter2 {
         }
     }
 
+    /**
+     * Fired when the local object's value is sucesfully set to the remote.
+     * @param {Error} err Synchronization error
+     * @event FiresyncBase#synced
+     * @example firesyncObject.on('synced', function(err){});
+     */
     _fireSynced(err) {
         this.emit('synced', err);
     }
