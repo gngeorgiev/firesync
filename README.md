@@ -126,6 +126,11 @@ depending on the underlying firebase value. The objects are guaranteed to be loa
         });
 ```
 
+# Important !!!
+---
+
+Whenever you are done with any <a href="#firesync.FiresyncObject">FiresyncObject</a> or <a href="#firesync.FiresyncArray">FiresyncArray</a> make sure to call the `detach()` method as it will unattach the inner firebase listeners.
+
 # API Reference
 ---
 ## Classes
