@@ -33,7 +33,7 @@ gulp.task('build', function () {
         .pipe(gulp.dest('./dist'));
 });
 
-gulp.task('test', function () {
+gulp.task('test', ['build'], function () {
     gulp.src('./test/firesync-test.js')
         .pipe(mocha())
         .once('end', function () {
