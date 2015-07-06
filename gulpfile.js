@@ -1,7 +1,6 @@
 var gulp = require('gulp');
 var browserify = require('browserify');
 var mocha = require('gulp-mocha');
-var insert = require('gulp-insert');
 var babelify = require('babelify');
 var source = require('vinyl-source-stream');
 var rename = require('gulp-rename');
