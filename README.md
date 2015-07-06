@@ -10,7 +10,11 @@
 
 
 ---
-**firesync** is a library for seamless data synchronization between **[Firebase](http://firebase.com)** and your local data. When a <a href="#firesync.FiresyncObject">FiresyncObject</a> or <a href="#firesync.FiresyncArray">FiresyncArray</a> is created this object is observed for changes. At the same time the <a href="#external_FirebaseRef">FirebaseRef</a> is also observed. When a change in the one end happens, the data is immediately synchronized to the other end, eliminating the need to explicitly subscribe to events in order to update objects.
+**firesync** is a library for seamless data synchronization between **[Firebase](http://firebase.com)** your local data and optionally the DOM, without the need of a framework, also known as **three-way-data-binding**. 
+
+The illustration below should help you understand how **firesync** works.
+
+![firesync](https://dl.dropboxusercontent.com/1/view/vy837kvpxutynns/Apps/Shutter/Drawing%20%281%29.png)
 
 # Requirements
 ---
@@ -99,7 +103,23 @@ if (!users.loaded()) {
 }
 ```
 
-Firesync.create - Automatically creates a synchronized object or array based on the underlying firebase value. The created
+Binding to an input element:
+```html
+<input type="text" id="input" />
+```
+
+```js
+var ref = new Firebase('https://example.firebaseio.com');
+
+var $input = document.querySelector('#input');
+var currentItem = new firesync.FiresyncObject(ref.child('currentItem')).bindTo($input, {
+    localAttr: 'text' //bind to the property text of the FiresyncObject
+});
+
+//changing the value in the input will result in the following item locally and remotely {text: 'inputText'}
+```
+
+`firesync.create` - Automatically creates a synchronized object or array based on the underlying firebase value. The created
 objects are guaranteed to be loaded.
 ```js
 var ref = new Firebase('https://example.firebaseio.com/users/fred'); //{name: 'fred'}
@@ -119,7 +139,7 @@ firesync.create(usersRef)
 
 ```
 
-Firesync.map - Returns a non-synchronized object or array, depending on the underlying firebase value. Each object in the
+`firesync.map` - Returns a non-synchronized object or array, depending on the underlying firebase value. Each object in the
 returned object/array is a synchronized <a href="#firesync.FiresyncObject">FiresyncObject</a> or <a href="#firesync.FiresyncArray">FiresyncArray</a>
 depending on the underlying firebase value. The objects are guaranteed to be loaded.
 ```js
