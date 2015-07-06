@@ -31,13 +31,13 @@ class FiresyncBase extends EventEmitter2 {
         this.__$$.loaded = false;
         this.__$$.setRemoteAfterLoad = false;
         this.__$$.refChangedCb = null;
-        this.__$$.FILTERED_PROPERTIES = ['__$$', '_events', 'newListener', 'event'];
-        this.__$$.BINDING_TYPES = { FIREBASE: 'FIREBASE', DOM: 'DOM' };
-        this.__$$.BINDING_TARGETS = _.extend({ ANY: 'ANY' }, this.__$$.BINDING_TYPES);
-        this.__$$.CHANGE_ORIGIN = { local: 'local', foreign: 'foreign' };
         this.__$$.bindings = [];
         this.__$$.bindingQueue = queue();
 
+        this.__$$.FILTERED_PROPERTIES = ['__$$', '_events', 'newListener', 'event'];
+        this.__$$.BINDING_TYPES = { FIREBASE: 'FIREBASE', DOM: 'DOM' };
+        this.__$$.BINDING_TARGETS = _.extend({ ANY: 'ANY' }, this.__$$.BINDING_TYPES);
+        this.__$$.CHANGE_ORIGIN = { LOCAL: 'LOCAL', FOREIGN: 'FOREIGN' };
         /**
          * {
          *  type: 'property|attribute|event',
@@ -47,8 +47,7 @@ class FiresyncBase extends EventEmitter2 {
          * }
          */
         this.__$$.BIND_TO_DEFAULT_SETTINGS = {
-            type: 'property',
-            foreignAttr: 'innerHtml'
+            type: 'innerHTML'
         };
 
         this.__$$.BIND_TO_DEFAULT_INPUT_SETTINGS = {
@@ -102,7 +101,7 @@ class FiresyncBase extends EventEmitter2 {
         let binding = null;
         if (settings.type === 'event') {
             binding = this._bindToEvent(element, settings);
-        } else if (settings.type === 'property') {
+        } else if (settings.type === 'innerHTML') {
             binding = this._bindToProperty(element, settings);
         } else if (settings.type === 'attribute') {
             binding = this._bindToAttribute(element, settings);
@@ -147,7 +146,7 @@ class FiresyncBase extends EventEmitter2 {
                 value: element[settings.foreignAttr]
             };
 
-            this._updateBindings(change, this.__$$.CHANGE_ORIGIN.foreign, this.__$$.BINDING_TARGETS.DOM);
+            this._updateBindings(change, this.__$$.CHANGE_ORIGIN.FOREIGN, this.__$$.BINDING_TARGETS.DOM);
         };
 
         element.addEventListener(settings.event, evCallback);
@@ -186,7 +185,7 @@ class FiresyncBase extends EventEmitter2 {
                 return this._fireLoaded(val);
             }
 
-            this._updateBindings(val, this.__$$.CHANGE_ORIGIN.foreign, this.__$$.BINDING_TARGETS.FIREBASE);
+            this._updateBindings(val, this.__$$.CHANGE_ORIGIN.FOREIGN, this.__$$.BINDING_TARGETS.FIREBASE);
         };
 
         let firebaseBinding = {
@@ -235,7 +234,7 @@ class FiresyncBase extends EventEmitter2 {
                 };
             });
 
-            this._updateBindings(changes, this.__$$.CHANGE_ORIGIN.local);
+            this._updateBindings(changes, this.__$$.CHANGE_ORIGIN.LOCAL);
         });
     }
 
@@ -251,7 +250,7 @@ class FiresyncBase extends EventEmitter2 {
                 if (binding.type === target || target === this.__$$.BINDING_TARGETS.ANY) {
                     binding.$inProgress = true;
                     if (binding.type === this.__$$.BINDING_TYPES.FIREBASE) {
-                        if (origin === this.__$$.CHANGE_ORIGIN.local) {
+                        if (origin === this.__$$.CHANGE_ORIGIN.LOCAL) {
                             bindingResolvedPromises.push(binding.updateForeign());
                         } else {
                             bindingResolvedPromises.push(binding.updateLocal(changes));
@@ -262,7 +261,7 @@ class FiresyncBase extends EventEmitter2 {
                             let property = change.property;
                             let value = change.value;
 
-                            if (origin === this.__$$.CHANGE_ORIGIN.local) {
+                            if (origin === this.__$$.CHANGE_ORIGIN.LOCAL) {
                                 bindingResolvedPromises.push(binding.updateForeign(property, value));
                             } else {
                                 bindingResolvedPromises.push(binding.updateLocal(property, value));
