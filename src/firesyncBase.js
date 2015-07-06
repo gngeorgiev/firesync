@@ -1,6 +1,7 @@
 'use strict';
 
 let EventEmitter2 = require('eventemitter2').EventEmitter2;
+let _ = require('lodash');
 
 /**
  * FirebaseRef object
@@ -31,6 +32,18 @@ class FiresyncBase extends EventEmitter2 {
         this.__$$.suspendObservers = false;
         this.__$$.refChangedCb = null;
         this.__$$.FILTERED_PROPERTIES = ['__$$', '_events', 'newListener', 'event'];
+        this.__$$.bindings = [];
+
+        this.__$$.BIND_TO_DEFAULT_SETTINGS = {
+            type: 'property',
+            elementProperty: 'innerHtml'
+        };
+
+        this.__$$.BIND_TO_DEFAULT_INPUT_SETTINGS = {
+            type: 'event',
+            elementProperty: 'value',
+            event: 'change'
+        };
 
         this._attach();
     }
@@ -60,6 +73,46 @@ class FiresyncBase extends EventEmitter2 {
      */
     detach() {
         return this.__$$.ref.off('value', this.__$$.refChangedCb);
+    }
+
+    bindTo(element, settings) {
+        if (element.nodeName.toLowerCase() === 'input') {
+            _.extend(settings, this.__$$.BIND_TO_DEFAULT_INPUT_SETTINGS);
+        } else {
+            _.extend(settings, this._$$.BIND_TO_DEFAULT_SETTINGS);
+        }
+
+        if (!settings.localProperty) {
+            throw new Error('You must specify a localProperty to which to bind the DOM element.');
+        }
+
+        let callback = null;
+        if (settings.type === 'event') {
+            callback = this._bindToEvent(element, settings);
+        } else if (settings.type === 'property') {
+            callback = this._bindToProperty(element, settings);
+        } else if (settings.type === 'attribute') {
+            callback = this._bindToAttribute(element, settings);
+        }
+
+        this.__$$.bindings.push({ element, settings, callback });
+    }
+
+    _bindToEvent(element, settings) {
+        let callback = () => {
+
+        };
+
+        element.addEventListener(settings.event, callback);
+        return callback;
+    }
+
+    _bindToProperty(element, settings) {
+
+    }
+
+    _bindToAttribute(element, settings) {
+
     }
 
     /**
