@@ -1,5 +1,7 @@
 # Firesync - Overview
 
+[![Join the chat at https://gitter.im/gngeorgiev/firesync](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gngeorgiev/firesync?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 [![Build Status](https://travis-ci.org/gngeorgiev/firesync.svg?branch=master)](https://travis-ci.org/gngeorgiev/firesync) [![Code Climate](https://codeclimate.com/github/gngeorgiev/firesync/badges/gpa.svg)](https://codeclimate.com/github/gngeorgiev/firesync) [![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
 [![dependencies](https://david-dm.org/gngeorgiev/firesync.svg)]() [![version](https://badge.fury.io/js/firesync-node.svg)](http://badge.fury.io/js/firesync-node)
 
