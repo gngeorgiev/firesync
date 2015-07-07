@@ -33,6 +33,7 @@ class FiresyncBase extends EventEmitter2 {
         this.__$$.refChangedCb = null;
         this.__$$.bindings = [];
         this.__$$.bindingQueue = queue();
+        this.__$$.version = 0;
 
         this.__$$.FILTERED_PROPERTIES = ['__$$', '_events', 'newListener', 'event'];
         this.__$$.BINDING_TYPES = { FIREBASE: 'FIREBASE', DOM: 'DOM' };
@@ -89,9 +90,9 @@ class FiresyncBase extends EventEmitter2 {
 
     bindTo(element, settings) {
         if (element.nodeName.toLowerCase() === 'input') {
-            _.extend(settings, this.__$$.BIND_TO_DEFAULT_INPUT_SETTINGS);
+            settings = _.extend({}, this.__$$.BIND_TO_DEFAULT_INPUT_SETTINGS, settings);
         } else {
-            _.extend(settings, this._$$.BIND_TO_DEFAULT_SETTINGS);
+            settings = _.extend({}, this.__$$.BIND_TO_DEFAULT_SETTINGS, settings);
         }
 
         if (!settings.localAttr) {
@@ -101,10 +102,10 @@ class FiresyncBase extends EventEmitter2 {
         let binding = null;
         if (settings.type === 'event') {
             binding = this._bindToEvent(element, settings);
-        } else if (settings.type === 'innerHTML') {
-            binding = this._bindToProperty(element, settings);
-        } else if (settings.type === 'attribute') {
-            binding = this._bindToAttribute(element, settings);
+        } else if (settings.type === 'innerHTML' || settings.type === 'attribute') {
+            binding = this._bindToMutation(element, settings);
+        } else if (settings.type === 'collection') {
+            binding = this._bindToCollection(element, settings);
         }
 
         _.extend(binding, {
@@ -127,20 +128,6 @@ class FiresyncBase extends EventEmitter2 {
     }
 
     _bindToEvent(element, settings) {
-        let binding = {
-            updateForeign: () => {
-                return new Promise((resolve) => {
-                    let val = this[settings.localAttr];
-                    if (val) {
-                        element[settings.foreignAttr] = val;
-                    }
-
-                    resolve();
-                });
-            }
-            //TODO: add detach
-        };
-
         let evCallback = () => {
             let change = {
                 property: settings.localAttr,
@@ -152,15 +139,67 @@ class FiresyncBase extends EventEmitter2 {
 
         element.addEventListener(settings.event, evCallback);
 
-        return binding;
+        return {
+            updateForeign: () => {
+                return new Promise((resolve) => {
+                    let val = this[settings.localAttr];
+                    if (val) {
+                        element[settings.foreignAttr] = val;
+                    }
+
+                    resolve();
+                });
+            },
+            detach: () => {
+                element.removeEventListener(settings.event, evCallback);
+            }
+        };
     }
 
-    _bindToProperty(element, settings) {
+    _bindToMutation(element, settings) {
+        let observer = new MutationObserver((mutations) => {
+            let neededMutations = mutations.filter((mutation) => {
+                if (settings.type === 'innerHTML') {
+                    return mutation.target.nodeName === '#text';
+                }
 
-    }
+                return mutation.target === element && mutation.attributeName === settings.foreignAttr;
+            });
 
-    _bindToAttribute(element, settings) {
+            if (neededMutations.length) {
+                let changes = neededMutations.map((mutation) => {
+                    return {
+                        property: settings.localAttr,
+                        value: settings.type === 'innerHTML' ?
+                            mutation.target.nodeValue : element.getAttribute(settings.foreignAttr)
+                    };
+                });
 
+                this._updateBindings(changes, this.__$$.CHANGE_ORIGIN.FOREIGN, this.__$$.BINDING_TARGETS.DOM);
+            }
+        });
+
+        observer.observe(element, { subtree: true, childList: true, characterData: true, attributes: true });
+
+        return {
+            updateForeign: () => {
+                return new Promise((resolve) => {
+                    let val = this[settings.localAttr];
+                    if (val) {
+                        if (settings.type === 'innerHTML') {
+                            element.innerHTML = val;
+                        } else {
+                            element.setAttribute(settings.foreignAttr, val);
+                        }
+                    }
+
+                    resolve();
+                });
+            },
+            detach: () => {
+                observer.disconnect();
+            }
+        }
     }
 
     /**
@@ -186,7 +225,10 @@ class FiresyncBase extends EventEmitter2 {
                 return this._fireLoaded(val);
             }
 
-            this._updateBindings(val, this.__$$.CHANGE_ORIGIN.FOREIGN, this.__$$.BINDING_TARGETS.FIREBASE);
+            this._updateBindings(val, this.__$$.CHANGE_ORIGIN.FOREIGN, this.__$$.BINDING_TARGETS.FIREBASE)
+                .then(() => {
+                    this.__$$.version++;
+                });
         };
 
         let firebaseBinding = {
@@ -241,47 +283,51 @@ class FiresyncBase extends EventEmitter2 {
     }
 
     _updateBindings(changes, origin, target = this.__$$.BINDING_TARGETS.ANY) {
-        this.__$$.bindings.forEach((binding) => {
-            let queueItem = (cb) => {
-                if (binding.$inProgress) {
-                    return cb();
-                }
-
-                let bindingResolvedPromises = [];
-
-                if (binding.type === target || target === this.__$$.BINDING_TARGETS.ANY) {
-                    binding.$inProgress = true;
-                    if (binding.type === this.__$$.BINDING_TYPES.FIREBASE) {
-                        if (origin === this.__$$.CHANGE_ORIGIN.LOCAL) {
-                            bindingResolvedPromises.push(binding.updateForeign());
-                        } else {
-                            bindingResolvedPromises.push(binding.updateLocal(changes));
-                        }
-                    } else {
-                        changes = Array.isArray(changes) ? changes : [changes];
-                        changes.forEach((change) => {
-                            let property = change.property;
-                            let value = change.value;
-
-                            if (origin === this.__$$.CHANGE_ORIGIN.LOCAL) {
-                                bindingResolvedPromises.push(binding.updateForeign(property, value));
-                            } else {
-                                bindingResolvedPromises.push(binding.updateLocal(property, value));
-                            }
-                        });
+        return new Promise((resolve) => {
+            this.__$$.bindings.forEach((binding) => {
+                let queueItem = (cb) => {
+                    if (binding.$inProgress) {
+                        return cb();
                     }
-                }
 
-                Promise.all(bindingResolvedPromises).then(() => {
-                    binding.$inProgress = false;
-                    cb();
-                });
-            };
+                    let bindingResolvedPromises = [];
 
-            this.__$$.bindingQueue.push(queueItem);
+                    if (binding.type === target || target === this.__$$.BINDING_TARGETS.ANY) {
+                        binding.$inProgress = true;
+                        if (binding.type === this.__$$.BINDING_TYPES.FIREBASE) {
+                            if (origin === this.__$$.CHANGE_ORIGIN.LOCAL) {
+                                bindingResolvedPromises.push(binding.updateForeign());
+                            } else {
+                                bindingResolvedPromises.push(binding.updateLocal(changes));
+                            }
+                        } else {
+                            changes = Array.isArray(changes) ? changes : [changes];
+                            changes.forEach((change) => {
+                                let property = change.property;
+                                let value = change.value;
+
+                                if (origin === this.__$$.CHANGE_ORIGIN.LOCAL) {
+                                    bindingResolvedPromises.push(binding.updateForeign(property, value));
+                                } else {
+                                    bindingResolvedPromises.push(binding.updateLocal(property, value));
+                                }
+                            });
+                        }
+                    }
+
+                    Promise.all(bindingResolvedPromises).then(() => {
+                        binding.$inProgress = false;
+                        cb();
+                    });
+                };
+
+                this.__$$.bindingQueue.push(queueItem);
+            });
+
+            this.__$$.bindingQueue.start(() => {
+                resolve();
+            });
         });
-
-        this.__$$.bindingQueue.start();
     }
 
     /**
@@ -301,15 +347,16 @@ class FiresyncBase extends EventEmitter2 {
      */
     _fireLoaded(val) {
         if (this.__$$.setRemoteAfterLoad) {
-            this._setRemoteCore();
+            this._updateBindings(val, this.__$$.CHANGE_ORIGIN.LOCAL, this.__$$.BINDING_TARGETS.FIREBASE);
         }
 
         if (val) {
-            this._setLocal(val);
+            this._updateBindings(val, this.__$$.CHANGE_ORIGIN.FOREIGN, this.__$$.BINDING_TARGETS.FIREBASE);
         }
 
         var emited = this.emit('loaded');
         if (!emited) {
+            //TODO: subscribe with on an unsubscribe when loaded is attached
             this.once('newListener', (ev) => {
                 if (ev === 'loaded') {
                     setTimeout(() => {
