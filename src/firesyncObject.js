@@ -12,6 +12,8 @@ import { FiresyncBase } from './firesyncBase.js'
 class FiresyncObject extends FiresyncBase {
     constructor(ref) {
         super(ref);
+
+        this.__$$.FILTERED_PROPERTIES.push('iterator');
     }
 
     /**
@@ -19,12 +21,7 @@ class FiresyncObject extends FiresyncBase {
      * @returns {object}
      */
     val() {
-        let obj = {};
-        for (let i of super._enumerate()) {
-            obj[i] = this[i];
-        }
-
-        return obj;
+        return super.asObject();
     }
 }
 

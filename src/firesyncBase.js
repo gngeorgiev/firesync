@@ -48,6 +48,15 @@ class FiresyncBase extends EventEmitter2 {
         throw new Error('val is not implemented');
     }
 
+    asObject() {
+        let obj = {};
+        for (let i of this._enumerate()) {
+            obj[i] = this[i];
+        }
+
+        return obj;
+    }
+
     /**
      * Indicates whether the object has loaded its data from Firebase.
      * @returns {boolean}
@@ -74,13 +83,15 @@ class FiresyncBase extends EventEmitter2 {
 
     bindTo(settings) {
         _.extend(settings, {
-            data: this.val()
+            data: this
         });
 
         let ractive = new Ractive(settings);
         let reactiveListeners = new Map();
 
         let binding = {
+            type: this.__$$.BINDING_TYPES.DOM,
+            data: { ractive },
             updateLocal: (property, value) => {
                 return new Promise((resolve) => {
                     this[property] = value;
@@ -319,7 +330,8 @@ class FiresyncBase extends EventEmitter2 {
     }
 
     _setRemote(cb) {
-        this.__$$.ref.set(this.val(), cb);
+        let val = this.val();
+        this.__$$.ref.set(val, cb);
     }
 
     _setLocal(obj) {
