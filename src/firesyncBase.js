@@ -138,6 +138,7 @@ class FiresyncBase extends EventEmitter2 {
                     resolve();
                 });
             }
+            //TODO: add detach
         };
 
         let evCallback = () => {
@@ -227,6 +228,7 @@ class FiresyncBase extends EventEmitter2 {
                 return this.__$$.setRemoteAfterLoad = true;
             }
 
+            //TODO: check for relevant change types only and dedupe the results
             let changes = args.map((change) => {
                 return {
                     property: change.name,
