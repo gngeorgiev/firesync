@@ -3,6 +3,7 @@
 let EventEmitter2 = require('eventemitter2').EventEmitter2;
 let _ = require('lodash');
 let queue = require('queue');
+let Ractive = require('ractive/ractive.min');
 
 /**
  * FirebaseRef object
@@ -39,23 +40,6 @@ class FiresyncBase extends EventEmitter2 {
         this.__$$.BINDING_TYPES = { FIREBASE: 'FIREBASE', DOM: 'DOM' };
         this.__$$.BINDING_TARGETS = _.extend({ ANY: 'ANY' }, this.__$$.BINDING_TYPES);
         this.__$$.CHANGE_ORIGIN = { LOCAL: 'LOCAL', FOREIGN: 'FOREIGN' };
-        /**
-         * {
-         *  type: 'property|attribute|event',
-         *  foreignAttr: 'innerHtml|attr|value',
-         *  localAttr: 'name',
-         *  event: 'change'
-         * }
-         */
-        this.__$$.BIND_TO_DEFAULT_SETTINGS = {
-            type: 'innerHTML'
-        };
-
-        this.__$$.BIND_TO_DEFAULT_INPUT_SETTINGS = {
-            type: 'event',
-            foreignAttr: 'value',
-            event: 'change'
-        };
 
         this._attach();
     }
@@ -88,118 +72,53 @@ class FiresyncBase extends EventEmitter2 {
         this.__$$.bindings = [];
     }
 
-    bindTo(element, settings) {
-        if (element.nodeName.toLowerCase() === 'input') {
-            settings = _.extend({}, this.__$$.BIND_TO_DEFAULT_INPUT_SETTINGS, settings);
-        } else {
-            settings = _.extend({}, this.__$$.BIND_TO_DEFAULT_SETTINGS, settings);
-        }
+    bindTo(settings) {
+        _.extend(settings, {
+            data: this.val()
+        });
 
-        if (!settings.localAttr) {
-            throw new Error('You must specify a localProperty to which to bind the DOM element.');
-        }
+        let ractive = new Ractive(settings);
+        let reactiveListeners = new Map();
 
-        let binding = null;
-        if (settings.type === 'event') {
-            binding = this._bindToEvent(element, settings);
-        } else if (settings.type === 'innerHTML' || settings.type === 'attribute') {
-            binding = this._bindToMutation(element, settings);
-        } else if (settings.type === 'collection') {
-            binding = this._bindToCollection(element, settings);
-        }
-
-        _.extend(binding, {
-            type: this.__$$.BINDING_TYPES.DOM,
-            data: {
-                element,
-                settings
-            },
+        let binding = {
             updateLocal: (property, value) => {
                 return new Promise((resolve) => {
                     this[property] = value;
                     resolve();
                 });
-            }
-        });
-
-        this._addBinding(binding);
-
-        return this;
-    }
-
-    _bindToEvent(element, settings) {
-        let evCallback = () => {
-            let change = {
-                property: settings.localAttr,
-                value: element[settings.foreignAttr]
-            };
-
-            this._updateBindings(change, this.__$$.CHANGE_ORIGIN.FOREIGN, this.__$$.BINDING_TARGETS.DOM);
-        };
-
-        element.addEventListener(settings.event, evCallback);
-
-        return {
-            updateForeign: () => {
+            },
+            updateForeign: (property, value) => {
                 return new Promise((resolve) => {
-                    let val = this[settings.localAttr];
-                    if (val) {
-                        element[settings.foreignAttr] = val;
-                    }
-
+                    ractive.set(property, value);
                     resolve();
-                });
+                })
             },
             detach: () => {
-                element.removeEventListener(settings.event, evCallback);
+                for (var observer of reactiveListeners.values()) {
+                    observer.cancel();
+                }
             }
         };
-    }
 
-    _bindToMutation(element, settings) {
-        let observer = new MutationObserver((mutations) => {
-            let neededMutations = mutations.filter((mutation) => {
-                if (settings.type === 'innerHTML') {
-                    return mutation.target.nodeName === '#text';
+
+        let applyObserve = (value, key) => {
+            let initialObserve = true;
+            let observer = ractive.observe(key, (newValue) => {
+                if (initialObserve) {
+                    return initialObserve = false;
                 }
 
-                return mutation.target === element && mutation.attributeName === settings.foreignAttr;
+                binding.updateLocal(key, newValue);
             });
 
-            if (neededMutations.length) {
-                let changes = neededMutations.map((mutation) => {
-                    return {
-                        property: settings.localAttr,
-                        value: settings.type === 'innerHTML' ?
-                            mutation.target.nodeValue : element.getAttribute(settings.foreignAttr)
-                    };
-                });
-
-                this._updateBindings(changes, this.__$$.CHANGE_ORIGIN.FOREIGN, this.__$$.BINDING_TARGETS.DOM);
+            if (!reactiveListeners.get(key)) {
+                reactiveListeners.set(key, observer);
             }
-        });
+        };
 
-        observer.observe(element, { subtree: true, childList: true, characterData: true, attributes: true });
-
-        return {
-            updateForeign: () => {
-                return new Promise((resolve) => {
-                    let val = this[settings.localAttr];
-                    if (val) {
-                        if (settings.type === 'innerHTML') {
-                            element.innerHTML = val;
-                        } else {
-                            element.setAttribute(settings.foreignAttr, val);
-                        }
-                    }
-
-                    resolve();
-                });
-            },
-            detach: () => {
-                observer.disconnect();
-            }
-        }
+        _.each(settings.data, applyObserve);
+        this._addBinding(binding);
+        return this;
     }
 
     /**
@@ -270,13 +189,15 @@ class FiresyncBase extends EventEmitter2 {
                 return this.__$$.setRemoteAfterLoad = true;
             }
 
-            //TODO: check for relevant change types only and dedupe the results
-            let changes = args.map((change) => {
-                return {
-                    property: change.name,
-                    value: this[change.name]
-                };
-            });
+            let changes = _.chain(args)
+                .map((change) => {
+                    return {
+                        property: change.name,
+                        value: this[change.name]
+                    };
+                })
+                .unique('value')
+                .value();
 
             this._updateBindings(changes, this.__$$.CHANGE_ORIGIN.LOCAL);
         });
@@ -354,16 +275,18 @@ class FiresyncBase extends EventEmitter2 {
             this._updateBindings(val, this.__$$.CHANGE_ORIGIN.FOREIGN, this.__$$.BINDING_TARGETS.FIREBASE);
         }
 
-        var emited = this.emit('loaded');
+        let emited = this.emit('loaded');
         if (!emited) {
-            //TODO: subscribe with on an unsubscribe when loaded is attached
-            this.once('newListener', (ev) => {
+            let newListenerCb = (ev) => {
                 if (ev === 'loaded') {
+                    this.off('newListener', newListenerCb);
                     setTimeout(() => {
                         this.emit('loaded');
-                    }, 100);
+                    }, 20);
                 }
-            });
+            };
+
+            this.on('newListener', newListenerCb);
         }
     }
 
