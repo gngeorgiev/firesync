@@ -3,16 +3,8 @@
 import { FiresyncBase } from './firesyncBase.js';
 import { FiresyncObject } from './firesyncObject.js';
 
-let _ = require('lodash');
-let mixin = require('mixin');
+import mixins from 'es6-mixins';
 
-class FiresyncBaseProxy extends FiresyncBase {
-    constructor(ref) {
-        super(ref);
-    }
-}
-
-let ArrayFiresyncBaseProxy = mixin(FiresyncBaseProxy, Array);
 
 /**
  * @class FiresyncArray
@@ -23,68 +15,60 @@ let ArrayFiresyncBaseProxy = mixin(FiresyncBaseProxy, Array);
  * @example new firesync.FiresyncArray(ref);
  * @memberof firesync
  */
-class FiresyncArray extends ArrayFiresyncBaseProxy {
+class FiresyncArray extends FiresyncBase {
     constructor(ref) {
         super(ref);
 
-        let valueHandler = (cb) => {
-            return (snap) => {
-                let val = snap.val();
-                let key = snap.key();
-
-                cb(val, key);
-            };
-        };
-
-        ref.on('child_added', valueHandler((val, key) => {
-            this.push(new FiresyncObject(ref.child(key)));
-        }));
+        this.$$.indeces = new Map();
+        this.$$.FILTERED_PROPERTIES.push('length');
     }
 
-    /**
-     * Returns a new non-synchronized array with the user-set values only.
-     * @returns {Array}
-     */
-    val() {
-        return this.__$$.array;
+    add(value, index = this.$$.indeces.size + 1, key = this.$$.ref.push().key()) {
+        this.splice(index, 0, value);
+        this.$$.indeces.set(key, index);
+
+        super._updateBindings({
+            property: key,
+            value: value,
+            type: this.$$.CHANGE_TYPE.ADD
+        }, this.$$.CHANGE_ORIGIN.LOCAL, this.$$.BINDING_TARGET.FIREBASE);
     }
 
-    /**
-     * Returns the length of the array.
-     * @returns {Number}
-     * @example firesyncArray.add(1); firesyncArray.length() === 1; //true
-     */
-    length() {
-        return this.__$$.array.length;
-    }
+    _attachBindings(firebaseBinding) {
+        firebaseBinding.updateForeign(() => {
 
-    /**
-     * Adds a value on the last index of the array.
-     * @param {Object} val The object to add.
-     * @example firesyncArray.add({val:1}); firesyncArray.add(5);
-     */
-    add(val) {
-        this[this.__$$.index++] = val;
-    }
+        });
 
-    /**
-     * Removes an element from the specified index and keeps the indeces in order.
-     * @param {Number} index The index from which to remove the element.
-     * @example firesyncArray.add(5); firesyncArray.add(6); firesyncArray.add(2);
-     * firesyncArray.remove(1); firesyncArray[1] === 6; //true
-     */
-    remove(index) {
-        let length = this.length();
-        if (index >= 0 && index < length) {
-            for (let i = index; i < length - 1; i++) {
-                this[i] = this[i + 1];
-            }
+        firebaseBinding.updateLocal((property, value, type, additionalData) => {
+            return new Promise((resolve) => {
+                let prevChild = additionalData.prevChild;
+                let child = prevChild || property;
+                let index = this.$$.indeces.get(child) || 0;
 
-            delete this[length - 1];
+                switch (type) {
+                    case this.$$.CHANGE_TYPE.UPDATE: {
+                        this[index] = value;
+                        this.$$.indeces.set(property, index);
+                        break;
+                    }
+                    case this.$$.CHANGE_TYPE.ADD: {
+                        this.add(value, ++index, property);
+                        break;
+                    }
+                    case this.$$.CHANGE_TYPE.DELETE: {
+                        this.splice(--index, 1);
+                        this.$$.indeces.delete(property);
+                        break;
+                    }
+                    default: break;
+                }
 
-            this.__$$.index--;
-        }
+                resolve();
+            });
+        });
     }
 }
+
+mixins(Array, FiresyncArray.prototype, {warn: false});
 
 export { FiresyncArray };

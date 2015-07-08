@@ -12,21 +12,47 @@ import { FiresyncBase } from './firesyncBase.js';
 class FiresyncObject extends FiresyncBase {
     constructor(ref) {
         super(ref);
-
-
     }
 
-    /**
-     * Returns a new, non-synchronized object with the user-set values only.
-     * @returns {object}
-     */
-    val() {
-        let obj = {};
-        for (let i of super._enumerate()) {
-            obj[i] = this[i];
-        }
+    _attachBindings(firebaseBinding) {
+        firebaseBinding.updateForeign((property, value, type) => {
+            return new Promise((resolve) => {
+                let updateVal = {};
+                switch (type) {
+                    case this.$$.CHANGE_TYPE.UPDATE:
+                    case this.$$.CHANGE_TYPE.ADD: {
+                        updateVal[property] = value;
+                        break;
+                    }
+                    case this.$$.CHANGE_TYPE.DELETE: {
+                        updateVal[property] = null;
+                        break;
+                    }
+                    default: break;
+                }
 
-        return obj;
+                super._updateRemote(updateVal, resolve);
+            });
+        });
+
+        firebaseBinding.updateLocal((property, value, type) => {
+            return new Promise((resolve) => {
+                switch (type) {
+                    case this.$$.CHANGE_TYPE.UPDATE:
+                    case this.$$.CHANGE_TYPE.ADD: {
+                        this[property] = value;
+                        break;
+                    }
+                    case this.$$.CHANGE_TYPE.DELETE: {
+                        delete this[property];
+                        break;
+                    }
+                    default: break;
+                }
+
+                resolve();
+            });
+        });
     }
 }
 
