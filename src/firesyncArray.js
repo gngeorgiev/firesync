@@ -1,6 +1,18 @@
 'use strict';
 
-import { FiresyncBase } from './firesyncBase.js'
+import { FiresyncBase } from './firesyncBase.js';
+import { FiresyncObject } from './firesyncObject.js';
+
+let _ = require('lodash');
+let mixin = require('mixin');
+
+class FiresyncBaseProxy extends FiresyncBase {
+    constructor(ref) {
+        super(ref);
+    }
+}
+
+let ArrayFiresyncBaseProxy = mixin(FiresyncBaseProxy, Array);
 
 /**
  * @class FiresyncArray
@@ -11,15 +23,22 @@ import { FiresyncBase } from './firesyncBase.js'
  * @example new firesync.FiresyncArray(ref);
  * @memberof firesync
  */
-class FiresyncArray extends FiresyncBase {
+class FiresyncArray extends ArrayFiresyncBaseProxy {
     constructor(ref) {
         super(ref);
 
-        this.__$$.index = 0;
+        let valueHandler = (cb) => {
+            return (snap) => {
+                let val = snap.val();
+                let key = snap.key();
 
-        this.once('loaded', () => {
-            this.__$$.index = this.val().length;
-        });
+                cb(val, key);
+            };
+        };
+
+        ref.on('child_added', valueHandler((val, key) => {
+            this.push(new FiresyncObject(ref.child(key)));
+        }));
     }
 
     /**
@@ -27,12 +46,7 @@ class FiresyncArray extends FiresyncBase {
      * @returns {Array}
      */
     val() {
-        let arr = [];
-        for (let i of this._enumerate()) {
-            arr.push(this[i]);
-        }
-
-        return arr;
+        return this.__$$.array;
     }
 
     /**
@@ -41,7 +55,7 @@ class FiresyncArray extends FiresyncBase {
      * @example firesyncArray.add(1); firesyncArray.length() === 1; //true
      */
     length() {
-        return this.__$$.index;
+        return this.__$$.array.length;
     }
 
     /**
@@ -73,4 +87,4 @@ class FiresyncArray extends FiresyncBase {
     }
 }
 
-export { FiresyncArray }
+export { FiresyncArray };

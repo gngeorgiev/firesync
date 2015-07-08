@@ -1,6 +1,6 @@
 'use strict';
 
-import { FiresyncBase } from './firesyncBase.js'
+import { FiresyncBase } from './firesyncBase.js';
 
 /**
  * @class FiresyncObject
@@ -12,6 +12,8 @@ import { FiresyncBase } from './firesyncBase.js'
 class FiresyncObject extends FiresyncBase {
     constructor(ref) {
         super(ref);
+
+
     }
 
     /**
@@ -28,4 +30,4 @@ class FiresyncObject extends FiresyncBase {
     }
 }
 
-export { FiresyncObject }
+export { FiresyncObject };

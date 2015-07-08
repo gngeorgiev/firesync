@@ -41,7 +41,7 @@ class FiresyncBase extends EventEmitter2 {
         this.__$$.BINDING_TARGETS = _.extend({ ANY: 'ANY' }, this.__$$.BINDING_TYPES);
         this.__$$.CHANGE_ORIGIN = { LOCAL: 'LOCAL', FOREIGN: 'FOREIGN' };
 
-        this._attach();
+        //this._attach();
     }
 
     val() {
@@ -206,7 +206,7 @@ class FiresyncBase extends EventEmitter2 {
     _updateBindings(changes, origin, target = this.__$$.BINDING_TARGETS.ANY) {
         return new Promise((resolve) => {
             this.__$$.bindings.forEach((binding) => {
-                let queueItem = (cb) => {
+                let queuedBinding = (cb) => {
                     if (binding.$inProgress) {
                         return cb();
                     }
@@ -215,26 +215,19 @@ class FiresyncBase extends EventEmitter2 {
 
                     if (binding.type === target || target === this.__$$.BINDING_TARGETS.ANY) {
                         binding.$inProgress = true;
-                        if (binding.type === this.__$$.BINDING_TYPES.FIREBASE) {
-                            if (origin === this.__$$.CHANGE_ORIGIN.LOCAL) {
-                                bindingResolvedPromises.push(binding.updateForeign());
-                            } else {
-                                bindingResolvedPromises.push(binding.updateLocal(changes));
-                            }
-                        } else {
-                            changes = Array.isArray(changes) ? changes : [changes];
-                            changes.forEach((change) => {
-                                let property = change.property;
-                                let value = change.value;
+                        changes = Array.isArray(changes) ? changes : [changes];
+                        changes.forEach((change) => {
+                            let property = change.property;
+                            let value = change.value;
+                            let action = change.type;
 
-                                if (origin === this.__$$.CHANGE_ORIGIN.LOCAL) {
-                                    bindingResolvedPromises.push(binding.updateForeign(property, value));
-                                } else {
-                                    bindingResolvedPromises.push(binding.updateLocal(property, value));
-                                }
-                            });
-                        }
-                    }
+                            if (origin === this.__$$.CHANGE_ORIGIN.LOCAL) {
+                                bindingResolvedPromises.push(binding.updateForeign(property, value, action));
+                            } else {
+                                bindingResolvedPromises.push(binding.updateLocal(property, value, action));
+                            }
+                        });
+                }
 
                     Promise.all(bindingResolvedPromises).then(() => {
                         binding.$inProgress = false;
@@ -242,7 +235,7 @@ class FiresyncBase extends EventEmitter2 {
                     });
                 };
 
-                this.__$$.bindingQueue.push(queueItem);
+                this.__$$.bindingQueue.push(queuedBinding);
             });
 
             this.__$$.bindingQueue.start(() => {
@@ -322,12 +315,19 @@ class FiresyncBase extends EventEmitter2 {
         this.__$$.ref.set(this.val(), cb);
     }
 
-    _setLocal(obj) {
-        this._clear();
+    _updateRemote(val, cb) {
+        this.__$$.ref.update(val, cb);
+    }
 
+    _updateLocal(obj) {
         for (let i of this._enumerate(obj)) {
             this[i] = obj[i];
         }
+    }
+
+    _setLocal(obj) {
+        this._clear();
+        this._updateLocal(obj);
     }
 
     _clear() {
@@ -337,4 +337,4 @@ class FiresyncBase extends EventEmitter2 {
     }
 }
 
-export { FiresyncBase }
+export { FiresyncBase };
