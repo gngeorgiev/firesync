@@ -1,6 +1,6 @@
 'use strict';
 
-import { FiresyncBase } from './firesyncBase.js'
+import { FiresyncBase } from './firesyncBase.js';
 
 /**
  * @class FiresyncObject
@@ -13,7 +13,7 @@ class FiresyncObject extends FiresyncBase {
     constructor(ref) {
         super(ref);
 
-        this.__$$.FILTERED_PROPERTIES.push('iterator');
+
     }
 
     /**
@@ -21,8 +21,13 @@ class FiresyncObject extends FiresyncBase {
      * @returns {object}
      */
     val() {
-        return super.asObject();
+        let obj = {};
+        for (let i of super._enumerate()) {
+            obj[i] = this[i];
+        }
+
+        return obj;
     }
 }
 
-export { FiresyncObject }
+export { FiresyncObject };
