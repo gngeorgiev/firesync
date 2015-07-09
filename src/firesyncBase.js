@@ -35,7 +35,7 @@ class FiresyncBase extends EventEmitter2 {
         this.$$.loaded = false;
         this.$$.bindings = [];
 
-        this.$$.FILTERED_PROPERTIES = ['$$', '_events', 'newListener', 'event'];
+        this.$$.FILTERED_PROPERTIES = new Set(['$$', '_events', 'newListener', 'event']);
         this.$$.BINDING_TYPE = { FIREBASE: 'FIREBASE', DOM: 'DOM' };
         this.$$.BINDING_TARGET = _.extend({ ANY: 'ANY' }, this.$$.BINDING_TYPE);
         this.$$.CHANGE_ORIGIN = { LOCAL: 'LOCAL', FOREIGN: 'FOREIGN' };
@@ -164,6 +164,26 @@ class FiresyncBase extends EventEmitter2 {
         let firebaseBinding = new FiresyncBinding(this.$$.BINDING_TYPE.FIREBASE, {ref: this.$$.ref});
         let handlersMap = new Map();
 
+        firebaseBinding.updateForeign((property, value, type) => {
+            return new Promise((resolve) => {
+                let updateVal = {};
+                switch (type) {
+                    case this.$$.CHANGE_TYPE.UPDATE:
+                    case this.$$.CHANGE_TYPE.ADD: {
+                        updateVal[property] = value;
+                        break;
+                    }
+                    case this.$$.CHANGE_TYPE.DELETE: {
+                        updateVal[property] = null;
+                        break;
+                    }
+                    default: break;
+                }
+
+                this._updateRemote(updateVal, resolve);
+            });
+        });
+
         firebaseBinding.detach(() => {
             for (var [event, handler] of handlersMap.entries()) {
                 this.$$.ref.off(event, handler);
@@ -199,26 +219,6 @@ class FiresyncBase extends EventEmitter2 {
                 handlersMap.set(event, handler);
                 this.$$.ref.on(event, handler);
             });
-
-        Object.observe(this, (args) => {
-            let filteredArgs = args.filter((arg) => {
-                return this.$$.FILTERED_PROPERTIES.indexOf(arg.name) === -1;
-            });
-
-            if (filteredArgs.length) {
-                this._fireChanged(args);
-                let updateArgs = filteredArgs.map((arg) => {
-                    return {
-                        property: arg.name,
-                        value: this[arg.name],
-                        type: arg.type,
-                        oldValue: arg.oldValue
-                    };
-                });
-
-                this._updateBindings(updateArgs, this.$$.CHANGE_ORIGIN.LOCAL);
-            }
-        });
 
         return this._addBinding(firebaseBinding);
     }

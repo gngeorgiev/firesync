@@ -1,7 +1,5 @@
 'use strict';
 
-import * as utils from './utils.js';
-
 class FiresyncBinding {
     constructor(type, data) {
 

@@ -20,25 +20,58 @@ class FiresyncArray extends FiresyncBase {
         super(ref);
 
         this.$$.indeces = new Map();
-        this.$$.FILTERED_PROPERTIES.push('length');
+        this.$$.keys = new Map();
     }
 
     add(value, index = this.$$.indeces.size + 1, key = this.$$.ref.push().key()) {
         this.splice(index, 0, value);
         this.$$.indeces.set(key, index);
+        this.$$.keys.set(index, key);
 
-        super._updateBindings({
+        super._fireChanged([{
+            name: 'length',
+            object: this,
+            type: 'add'
+        }]);
+
+        return super._updateBindings({
             property: key,
             value: value,
             type: this.$$.CHANGE_TYPE.ADD
         }, this.$$.CHANGE_ORIGIN.LOCAL, this.$$.BINDING_TARGET.FIREBASE);
     }
 
+    remove(identifier) {
+        //number
+        let index = identifier;
+
+        if (typeof identifier === 'object') {
+            index = this.indexOf(identifier);
+        }
+
+        if (typeof identifier === 'string') {
+            index = this.$$.indeces.get(identifier);
+        }
+
+        let key = this.$$.keys.get(index);
+        let oldValue = this.splice(index, 1);
+        this.$$.indeces.delete(key);
+        this.$$.keys.delete(index);
+
+        super._fireChanged([{
+            name: 'length',
+            object: this,
+            type: 'delete',
+            oldValue: oldValue
+        }]);
+
+        return super._updateBindings({
+            property: key,
+            type: this.$$.CHANGE_TYPE.DELETE
+        }, this.$$.CHANGE_ORIGIN.LOCAL, this.$$.BINDING_TARGET.FIREBASE);
+    }
+
     _attachBindings(firebaseBinding) {
-        firebaseBinding.updateForeign(() => {
-
-        });
-
         firebaseBinding.updateLocal((property, value, type, additionalData) => {
             return new Promise((resolve) => {
                 let prevChild = additionalData.prevChild;
@@ -49,6 +82,7 @@ class FiresyncArray extends FiresyncBase {
                     case this.$$.CHANGE_TYPE.UPDATE: {
                         this[index] = value;
                         this.$$.indeces.set(property, index);
+                        this.$$.keys.set(index, property);
                         break;
                     }
                     case this.$$.CHANGE_TYPE.ADD: {
@@ -56,8 +90,7 @@ class FiresyncArray extends FiresyncBase {
                         break;
                     }
                     case this.$$.CHANGE_TYPE.DELETE: {
-                        this.splice(--index, 1);
-                        this.$$.indeces.delete(property);
+                        this.remove(index);
                         break;
                     }
                     default: break;

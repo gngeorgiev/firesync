@@ -15,24 +15,25 @@ class FiresyncObject extends FiresyncBase {
     }
 
     _attachBindings(firebaseBinding) {
-        firebaseBinding.updateForeign((property, value, type) => {
-            return new Promise((resolve) => {
-                let updateVal = {};
-                switch (type) {
-                    case this.$$.CHANGE_TYPE.UPDATE:
-                    case this.$$.CHANGE_TYPE.ADD: {
-                        updateVal[property] = value;
-                        break;
-                    }
-                    case this.$$.CHANGE_TYPE.DELETE: {
-                        updateVal[property] = null;
-                        break;
-                    }
-                    default: break;
-                }
-
-                super._updateRemote(updateVal, resolve);
+        Object.observe(this, (args) => {
+            let filteredArgs = args.filter((arg) => {
+                let result = this.$$.FILTERED_PROPERTIES.has(arg.name);
+                return !result;
             });
+
+            if (filteredArgs.length) {
+                this._fireChanged(args);
+                let updateArgs = filteredArgs.map((arg) => {
+                    return {
+                        property: arg.name,
+                        value: this[arg.name],
+                        type: arg.type,
+                        oldValue: arg.oldValue
+                    };
+                });
+
+                this._updateBindings(updateArgs, this.$$.CHANGE_ORIGIN.LOCAL);
+            }
         });
 
         firebaseBinding.updateLocal((property, value, type) => {
