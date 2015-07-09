@@ -16118,8 +16118,8 @@ var FiresyncArray = (function (_FiresyncBase) {
     _createClass(FiresyncArray, [{
         key: 'add',
         value: function add(value) {
-            var index = arguments[1] === undefined ? this.$$.indeces.size + 1 : arguments[1];
-            var key = arguments[2] === undefined ? this.$$.ref.push().key() : arguments[2];
+            var key = arguments[1] === undefined ? this.$$.ref.push().key() : arguments[1];
+            var index = arguments[2] === undefined ? this.$$.indeces.size + 1 : arguments[2];
 
             this.splice(index, 0, value);
             this.$$.indeces.set(key, index);
@@ -16143,15 +16143,15 @@ var FiresyncArray = (function (_FiresyncBase) {
             //number
             var index = identifier;
 
-            if (typeof identifier === 'object') {
-                index = this.indexOf(identifier);
-            }
-
             if (typeof identifier === 'string') {
                 index = this.$$.indeces.get(identifier);
             }
 
-            var key = this.$$.keys.get(index);
+            if (typeof identifier === 'object' || index === undefined) {
+                index = this.indexOf(identifier);
+            }
+
+            var key = this.$$.keys.get(index + 1);
             var oldValue = this.splice(index, 1);
             this.$$.indeces['delete'](key);
             this.$$.keys['delete'](index);

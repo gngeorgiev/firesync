@@ -274,6 +274,45 @@ describe('Firesync tests', function() {
                     done();
                 });
             });
+
+            it('should remove object', function (done) {
+                obj = new FiresyncArray(testRef);
+                var innerObj = {};
+                [{}, {}, innerObj, {}, {}].forEach(function (i) {
+                    obj.add(i);
+                });
+
+                obj.remove(innerObj).then(function () {
+                    expect(obj.length).to.equal(4);
+                    expect(obj.indexOf(innerObj) === -1).to.equal(true);
+                    done();
+                });
+            });
+
+            it('should remove string and from remote', function (done) {
+                obj = new FiresyncArray(testRef);
+                var promises = ['1', '2', '3', '4', '5'].map(function (i) {
+                    return obj.add(i);
+                });
+
+                Promise.all(promises).then(function () {
+                    obj.remove('3').then(function () {
+                        expect(obj.length).to.equal(4);
+                        expect(obj.indexOf('3') === -1).to.equal(true);
+                        testRef.once('value', function (snap) {
+                            var val = snap.val();
+                            Object.keys(val).forEach(function (key) {
+                                var v = val[key];
+                                if (v === '3') {
+                                    return done(new Error('Should not happen'));
+                                }
+                            });
+
+                            done();
+                        });
+                    });
+                });
+            })
         });
 
         describe('Util methods', function () {

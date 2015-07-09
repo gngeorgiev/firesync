@@ -23,7 +23,7 @@ class FiresyncArray extends FiresyncBase {
         this.$$.keys = new Map();
     }
 
-    add(value, index = this.$$.indeces.size + 1, key = this.$$.ref.push().key()) {
+    add(value, key = this.$$.ref.push().key(), index = this.$$.indeces.size + 1) {
         this.splice(index, 0, value);
         this.$$.indeces.set(key, index);
         this.$$.keys.set(index, key);
@@ -45,15 +45,15 @@ class FiresyncArray extends FiresyncBase {
         //number
         let index = identifier;
 
-        if (typeof identifier === 'object') {
-            index = this.indexOf(identifier);
-        }
-
         if (typeof identifier === 'string') {
             index = this.$$.indeces.get(identifier);
         }
 
-        let key = this.$$.keys.get(index);
+        if (typeof identifier === 'object' || index === undefined) {
+            index = this.indexOf(identifier);
+        }
+
+        let key = this.$$.keys.get(index + 1);
         let oldValue = this.splice(index, 1);
         this.$$.indeces.delete(key);
         this.$$.keys.delete(index);
