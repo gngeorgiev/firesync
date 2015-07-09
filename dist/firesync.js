@@ -16093,6 +16093,10 @@ var _es6Mixins = require('es6-mixins');
 
 var _es6Mixins2 = _interopRequireDefault(_es6Mixins);
 
+var _lodash = require('lodash');
+
+var _lodash2 = _interopRequireDefault(_lodash);
+
 /**
  * @class FiresyncArray
  * @classdesc An array which keeps its values synchronized with the remote.
@@ -16116,6 +16120,40 @@ var FiresyncArray = (function (_FiresyncBase) {
     _inherits(FiresyncArray, _FiresyncBase);
 
     _createClass(FiresyncArray, [{
+        key: 'key',
+        value: function key(index) {
+            if (typeof index !== 'number') {
+                index = this.indexOf(index);
+            }
+
+            return this.$$.keys.get(index + 1);
+        }
+    }, {
+        key: 'update',
+        value: function update(value, identifier) {
+            var index = this._getIndex(identifier);
+            var key = this.key(index);
+            var val = this[index];
+
+            if (typeof val === 'number' || typeof val === 'string') {
+                val = this[index] = value;
+            } else {
+                _lodash2['default'].extend(val, value);
+            }
+
+            _get(Object.getPrototypeOf(FiresyncArray.prototype), '_fireChanged', this).call(this, [{
+                name: 'value',
+                object: val,
+                type: this.$$.CHANGE_TYPE.UPDATE
+            }]);
+
+            return _get(Object.getPrototypeOf(FiresyncArray.prototype), '_updateBindings', this).call(this, {
+                property: key,
+                value: val,
+                type: this.$$.CHANGE_TYPE.UPDATE
+            }, this.$$.CHANGE_ORIGIN.LOCAL, this.$$.BINDING_TARGET.FIREBASE);
+        }
+    }, {
         key: 'add',
         value: function add(value) {
             var key = arguments[1] === undefined ? this.$$.ref.push().key() : arguments[1];
@@ -16127,8 +16165,8 @@ var FiresyncArray = (function (_FiresyncBase) {
 
             _get(Object.getPrototypeOf(FiresyncArray.prototype), '_fireChanged', this).call(this, [{
                 name: 'length',
-                object: this,
-                type: 'add'
+                object: value,
+                type: this.$$.CHANGE_TYPE.ADD
             }]);
 
             return _get(Object.getPrototypeOf(FiresyncArray.prototype), '_updateBindings', this).call(this, {
@@ -16141,6 +16179,28 @@ var FiresyncArray = (function (_FiresyncBase) {
         key: 'remove',
         value: function remove(identifier) {
             //number
+
+            var index = this._getIndex(identifier);
+            var key = this.key(index);
+            var oldValue = this.splice(index, 1);
+            this.$$.indeces['delete'](key);
+            this.$$.keys['delete'](index);
+
+            _get(Object.getPrototypeOf(FiresyncArray.prototype), '_fireChanged', this).call(this, [{
+                name: 'length',
+                object: null,
+                type: this.$$.CHANGE_TYPE.DELETE,
+                oldValue: oldValue
+            }]);
+
+            return _get(Object.getPrototypeOf(FiresyncArray.prototype), '_updateBindings', this).call(this, {
+                property: key,
+                type: this.$$.CHANGE_TYPE.DELETE
+            }, this.$$.CHANGE_ORIGIN.LOCAL, this.$$.BINDING_TARGET.FIREBASE);
+        }
+    }, {
+        key: '_getIndex',
+        value: function _getIndex(identifier) {
             var index = identifier;
 
             if (typeof identifier === 'string') {
@@ -16151,22 +16211,7 @@ var FiresyncArray = (function (_FiresyncBase) {
                 index = this.indexOf(identifier);
             }
 
-            var key = this.$$.keys.get(index + 1);
-            var oldValue = this.splice(index, 1);
-            this.$$.indeces['delete'](key);
-            this.$$.keys['delete'](index);
-
-            _get(Object.getPrototypeOf(FiresyncArray.prototype), '_fireChanged', this).call(this, [{
-                name: 'length',
-                object: this,
-                type: 'delete',
-                oldValue: oldValue
-            }]);
-
-            return _get(Object.getPrototypeOf(FiresyncArray.prototype), '_updateBindings', this).call(this, {
-                property: key,
-                type: this.$$.CHANGE_TYPE.DELETE
-            }, this.$$.CHANGE_ORIGIN.LOCAL, this.$$.BINDING_TARGET.FIREBASE);
+            return index;
         }
     }, {
         key: '_attachBindings',
@@ -16214,7 +16259,7 @@ var FiresyncArray = (function (_FiresyncBase) {
 
 exports.FiresyncArray = FiresyncArray;
 
-},{"./firesyncBase.js":83,"./firesyncObject.js":85,"babel-runtime/core-js/map":3,"babel-runtime/core-js/promise":8,"babel-runtime/helpers/class-call-check":12,"babel-runtime/helpers/create-class":13,"babel-runtime/helpers/get":14,"babel-runtime/helpers/inherits":15,"babel-runtime/helpers/interop-require-default":16,"es6-mixins":75}],83:[function(require,module,exports){
+},{"./firesyncBase.js":83,"./firesyncObject.js":85,"babel-runtime/core-js/map":3,"babel-runtime/core-js/promise":8,"babel-runtime/helpers/class-call-check":12,"babel-runtime/helpers/create-class":13,"babel-runtime/helpers/get":14,"babel-runtime/helpers/inherits":15,"babel-runtime/helpers/interop-require-default":16,"es6-mixins":75,"lodash":77}],83:[function(require,module,exports){
 'use strict';
 
 var _inherits = require('babel-runtime/helpers/inherits')['default'];

@@ -312,7 +312,60 @@ describe('Firesync tests', function() {
                         });
                     });
                 });
-            })
+            });
+
+            it('should return correct key by value', function () {
+                obj = new FiresyncArray(testRef);
+                obj.add('');
+                obj.add({});
+                obj.add('pesho', 'peshoKey');
+
+                var key = obj.key('pesho');
+                expect(key).to.equal('peshoKey');
+            });
+
+            it('should return correct key by index', function () {
+                obj = new FiresyncArray(testRef);
+                obj.add('');
+                obj.add({});
+                obj.add('pesho', 'peshoKey');
+
+                var key = obj.key(obj.indexOf('pesho'));
+                expect(key).to.equal('peshoKey');
+            });
+
+            it('should update string by index', function () {
+                obj = new FiresyncArray(testRef);
+                obj.add('');
+                obj.add({});
+                obj.add('pesho', 'peshoKey');
+
+                var index = obj.indexOf('pesho');
+                obj.update('gosho', index);
+                expect(obj[index]).to.equal('gosho');
+            });
+
+            it('should update object by index', function () {
+                obj = new FiresyncArray(testRef);
+                obj.add('');
+                obj.add({});
+                obj.add('pesho', 'peshoKey');
+
+                obj.update({
+                    gosho: 1
+                }, 1);
+                expect(obj[1].gosho).to.equal(1);
+            });
+
+            it('should update object by value', function () {
+                obj = new FiresyncArray(testRef);
+                obj.add('');
+                obj.add({});
+                obj.add('pesho', 'peshoKey');
+
+                obj.update('pesho', '');
+                expect(obj[0]).to.equal('pesho');
+            });
         });
 
         describe('Util methods', function () {

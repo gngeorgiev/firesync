@@ -4,7 +4,7 @@ import { FiresyncBase } from './firesyncBase.js';
 import { FiresyncObject } from './firesyncObject.js';
 
 import mixins from 'es6-mixins';
-
+import _ from 'lodash';
 
 /**
  * @class FiresyncArray
@@ -23,6 +23,38 @@ class FiresyncArray extends FiresyncBase {
         this.$$.keys = new Map();
     }
 
+    key(index) {
+        if (typeof index !== 'number') {
+            index = this.indexOf(index);
+        }
+
+        return this.$$.keys.get(index + 1);
+    }
+
+    update(value, identifier) {
+        let index = this._getIndex(identifier);
+        let key = this.key(index);
+        let val = this[index];
+
+        if (typeof val === 'number' || typeof val === 'string') {
+            val = this[index] = value;
+        } else {
+            _.extend(val, value);
+        }
+
+        super._fireChanged([{
+            name: 'value',
+            object: val,
+            type: this.$$.CHANGE_TYPE.UPDATE
+        }]);
+
+        return super._updateBindings({
+            property: key,
+            value: val,
+            type: this.$$.CHANGE_TYPE.UPDATE
+        }, this.$$.CHANGE_ORIGIN.LOCAL, this.$$.BINDING_TARGET.FIREBASE);
+    }
+
     add(value, key = this.$$.ref.push().key(), index = this.$$.indeces.size + 1) {
         this.splice(index, 0, value);
         this.$$.indeces.set(key, index);
@@ -30,8 +62,8 @@ class FiresyncArray extends FiresyncBase {
 
         super._fireChanged([{
             name: 'length',
-            object: this,
-            type: 'add'
+            object: value,
+            type: this.$$.CHANGE_TYPE.ADD
         }]);
 
         return super._updateBindings({
@@ -43,6 +75,27 @@ class FiresyncArray extends FiresyncBase {
 
     remove(identifier) {
         //number
+
+        let index = this._getIndex(identifier);
+        let key = this.key(index);
+        let oldValue = this.splice(index, 1);
+        this.$$.indeces.delete(key);
+        this.$$.keys.delete(index);
+
+        super._fireChanged([{
+            name: 'length',
+            object: null,
+            type: this.$$.CHANGE_TYPE.DELETE,
+            oldValue: oldValue
+        }]);
+
+        return super._updateBindings({
+            property: key,
+            type: this.$$.CHANGE_TYPE.DELETE
+        }, this.$$.CHANGE_ORIGIN.LOCAL, this.$$.BINDING_TARGET.FIREBASE);
+    }
+
+    _getIndex(identifier) {
         let index = identifier;
 
         if (typeof identifier === 'string') {
@@ -53,22 +106,7 @@ class FiresyncArray extends FiresyncBase {
             index = this.indexOf(identifier);
         }
 
-        let key = this.$$.keys.get(index + 1);
-        let oldValue = this.splice(index, 1);
-        this.$$.indeces.delete(key);
-        this.$$.keys.delete(index);
-
-        super._fireChanged([{
-            name: 'length',
-            object: this,
-            type: 'delete',
-            oldValue: oldValue
-        }]);
-
-        return super._updateBindings({
-            property: key,
-            type: this.$$.CHANGE_TYPE.DELETE
-        }, this.$$.CHANGE_ORIGIN.LOCAL, this.$$.BINDING_TARGET.FIREBASE);
+        return index;
     }
 
     _attachBindings(firebaseBinding) {
