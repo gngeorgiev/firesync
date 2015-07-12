@@ -2,6 +2,7 @@
 
 import { FiresyncBase } from './firesyncBase.js';
 import * as constants from './constants.js';
+import _ from 'lodash';
 
 /**
  * @class FiresyncObject
@@ -16,25 +17,8 @@ class FiresyncObject extends FiresyncBase {
     }
 
     _attachBindings(firebaseBinding) {
-        Object.observe(this, (args) => {
-            let filteredArgs = args.filter((arg) => {
-                let result = this.$$.FILTERED_PROPERTIES.has(arg.name);
-                return !result;
-            });
-
-            if (filteredArgs.length) {
-                this._fireChanged(args);
-                let updateArgs = filteredArgs.map((arg) => {
-                    return {
-                        property: arg.name,
-                        value: this[arg.name],
-                        type: arg.type,
-                        oldValue: arg.oldValue
-                    };
-                });
-
-                this._updateBindings(updateArgs, constants.CHANGE_ORIGIN.LOCAL);
-            }
+        this.on('_object.observe', (updateArgs) => {
+            super._updateBindings(updateArgs, constants.CHANGE_ORIGIN.LOCAL);
         });
     }
 }

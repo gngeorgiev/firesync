@@ -3,6 +3,9 @@
 import { FiresyncObject } from './firesyncObject.js';
 import { FiresyncArray } from './firesyncArray.js';
 
+
+
+
 /**
  * @class firesync
  * @classdesc The entry point of firesync.

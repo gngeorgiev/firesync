@@ -22,6 +22,9 @@ class FiresyncArray extends FiresyncBase {
 
         this.$$.indeces = new Map();
         this.$$.keys = new Map();
+        this.$$.FILTERED_PROPERTIES.add('iterator');
+        
+        this.iterator = [];
     }
 
     key(index) {
@@ -38,10 +41,13 @@ class FiresyncArray extends FiresyncBase {
         let val = this[index];
 
         if (typeof val === 'number' || typeof val === 'string') {
-            val = this[index] = value;
+            val = value;
         } else {
             _.extend(val, value);
         }
+
+        this.splice(index, 1, value);
+        this.iterator.splice(index, 1, value);
 
         super._fireChanged([{
             name: 'value',
@@ -58,6 +64,7 @@ class FiresyncArray extends FiresyncBase {
 
     add(value, key = this.$$.ref.push().key(), index = this.$$.indeces.size + 1) {
         this.splice(index, 0, value);
+        this.iterator.splice(index, 0, value);
         this.$$.indeces.set(key, index);
         this.$$.keys.set(index, key);
 
@@ -75,11 +82,10 @@ class FiresyncArray extends FiresyncBase {
     }
 
     remove(identifier) {
-        //number
-
         let index = this._getIndex(identifier);
         let key = this.key(index);
         let oldValue = this.splice(index, 1);
+        this.iterator.splice(index, 1);
         this.$$.indeces.delete(key);
         this.$$.keys.delete(index);
 

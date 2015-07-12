@@ -56,7 +56,7 @@ class FiresyncBinding {
             return this._detach = cb;
         }
 
-        this._detach.apply(null, arguments);
+        this._detach && this._detach.apply(null, arguments);
     }
 
     begin(origin) {

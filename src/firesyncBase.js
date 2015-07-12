@@ -3,7 +3,7 @@
 import { EventEmitter2 } from 'eventemitter2';
 import _ from 'lodash';
 import queue from 'queue';
-import Ractive from 'ractive/ractive.min';
+import Ractive from 'ractive';
 import { FiresyncBinding } from './firesyncBinding.js'
 import * as constants from './constants.js';
 
@@ -28,15 +28,13 @@ class FiresyncBase extends EventEmitter2 {
     constructor(ref) {
         super();
 
-        this.iterator = this; //for mustache templates iteration
-
         this.$$ = {};
         this.$$.ref = ref;
         this.$$.loaded = false;
         this.$$.bindings = [];
 
 
-        this.$$.FILTERED_PROPERTIES = new Set(['$$', '_events', 'newListener', 'event']);
+        this.$$.FILTERED_PROPERTIES = new Set(['$$', '_events', 'newListener', 'event', 'iterator']);
 
         let firebaseBinding = this._attach();
         this._attachBindings(firebaseBinding);
@@ -74,44 +72,41 @@ class FiresyncBase extends EventEmitter2 {
         let ractive = new Ractive(settings);
         let reactiveListeners = new Map();
 
-        let binding = new FiresyncBinding(constants.BINDING_TYPE.DOM, {ractive, settings}, this);
-        binding.updateLocal((property, value) => {
+        let domBinding = new FiresyncBinding(constants.BINDING_TYPE.DOM, {ractive, settings}, this);
+        domBinding.updateLocal((property, value) => {
             return new Promise((resolve) => {
-                this[property] = value;
+                if (ractive.get(property) === value) {
+                    return resolve();
+                }
+                
+                if (this[property] === value) {
+                    //we need to fire the bindings ourselves since the 
+                    //Object.observe callback will not be invoked
+                    
+                    this._updateBindings({
+                        property,
+                        value,
+                        type: constants.CHANGE_TYPE.UPDATE
+                    }, 
+                    constants.CHANGE_ORIGIN.LOCAL, 
+                    constants.BINDING_TARGET.DOM,
+                    true);
+                } else {
+                    this[property] = value;    
+                }
+                
                 resolve();
             });
         });
             
-        binding.updateForeign((property, value) => {
+        domBinding.updateForeign((property, value) => {
             return new Promise((resolve) => {
                 ractive.set(property, value);
                 resolve();
             })
         });
         
-        binding.detach(() => {
-            for (var observer of reactiveListeners.values()) {
-                observer.cancel();
-            }
-        });
-
-        let applyObserve = (value, key) => {
-            let initialObserve = true;
-            let observer = ractive.observe(key, (newValue) => {
-                if (initialObserve) {
-                    return initialObserve = false;
-                }
-
-                binding.updateLocal(key, newValue);
-            });
-
-            if (!reactiveListeners.get(key)) {
-                reactiveListeners.set(key, observer);
-            }
-        };
-
-        _.each(settings.data, applyObserve);
-        this._addBinding(binding);
+        this._addBinding(domBinding);
         return this;
     }
 
@@ -146,6 +141,35 @@ class FiresyncBase extends EventEmitter2 {
     }
 
     _attach() {
+        Object.observe(this, (args) => {
+            let filteredArgs = _.chain(args)
+            .filter((arg) => {
+                return !this.$$.FILTERED_PROPERTIES.has(arg.name);
+            })
+            .unique((arg) => {
+                return arg.name; 
+            })
+            .value();
+
+            if (filteredArgs.length) {
+                this._fireChanged(args);
+                let updateArgs = filteredArgs.map((arg) => {
+                    let updateArg = {
+                        property: arg.name,
+                        value: this[arg.name],
+                        oldValue: arg.oldValue
+                    };
+                    
+                    updateArg.type = _.isNull(updateArg.value) || _.isUndefined(updateArg.value) ? 
+                        constants.CHANGE_TYPE.DELETE : constants.CHANGE_TYPE.UPDATE;
+                    
+                    return updateArg;
+                });
+
+                this.emit('_object.observe', updateArgs);
+            }
+        });
+        
         this.$$.ref.once('value', () => {
             this.$$.loaded = true;
             this._fireLoaded();
@@ -175,7 +199,7 @@ class FiresyncBase extends EventEmitter2 {
         });
 
         firebaseBinding.detach(() => {
-            for (var [event, handler] of handlersMap.entries()) {
+            for (let [event, handler] of handlersMap.entries()) {
                 this.$$.ref.off(event, handler);
             }
         });
@@ -213,13 +237,13 @@ class FiresyncBase extends EventEmitter2 {
         return this._addBinding(firebaseBinding);
     }
 
-    _updateBindings(changes, origin, target = constants.BINDING_TARGET.ANY) {
+    _updateBindings(changes, origin, target = constants.BINDING_TARGET.ANY, force = false) {
         return new Promise((resolve) => {
             let bindingQueue = queue();
 
             this.$$.bindings.forEach((binding) => {
                 let queuedBinding = (cb) => {
-                    if (binding.inProgress && binding.origin !== origin) {
+                    if (binding.inProgress && binding.origin !== origin && !force) {
                         return cb();
                     }
 

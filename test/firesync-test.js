@@ -34,8 +34,12 @@ var handleCb = function (cb) {
     }
 };
 
+var atIndex = function (obj, index) {
+    return obj[Object.keys(obj)[index]];
+};
+
 var first = function (obj) {
-    return obj[Object.keys(obj)[0]];
+    return atIndex(obj, 0);
 };
 
 describe('Firesync tests', function() {
@@ -65,6 +69,22 @@ describe('Firesync tests', function() {
     });
 
     if (typeof require === 'undefined') {
+        var domTimeout = function (fn, done, timeout) {
+            timeout = timeout || 100;
+            
+            return new Promise(function (resolve, reject) {
+                setTimeout(function () {
+                    fn();
+                    if (!done) {
+                        return resolve();
+                    }
+                    
+                    done();
+                    resolve();
+                }, timeout);    
+            });
+        }
+        
         var mainContainer = document.createElement('div');
         mainContainer.setAttribute('id', 'container');
         document.body.appendChild(mainContainer);
@@ -79,7 +99,7 @@ describe('Firesync tests', function() {
             return createElement('div');
         }
         
-        describe.skip('DOM binding', function () {
+        describe('DOM binding', function () {
             
             afterEach(function () {
                 mainContainer.innerHTML = '';
@@ -92,14 +112,14 @@ describe('Firesync tests', function() {
                     template: '<input type="text" />'
                 });
                 
-                setTimeout(function () {
+                domTimeout(function () {
                     expect(container.childElementCount).to.equal(1);
                     expect(container.children[0].nodeName).to.equal('INPUT');
-                    done();
-                }, 100);
+                }, done)
+                .catch(fail);
             });
             
-            it('should create an input with value binding', function (done) {
+            it('should create an input with value binding - from object', function (done) {
                 var container = getContainer();
                 obj = new FiresyncObject(testRef).bindTo({
                     el: container,
@@ -108,12 +128,89 @@ describe('Firesync tests', function() {
                 
                 obj.value = 'pesho';
                 
-                setTimeout(function () {
+                domTimeout(function () {
                     expect(container.childElementCount).to.equal(1);
                     expect(container.children[0].nodeName).to.equal('INPUT');
                     expect(container.children[0].value).to.equal('pesho');
-                    done();
-                }, 100);
+                }, done)
+                .catch(fail);
+            });
+            
+            it('should create an input with value binding - from dom', function (done) {
+                this.timeout(10000);
+                var container = getContainer();
+                obj = new FiresyncObject(testRef).bindTo({
+                    el: container,
+                    template: '<input type="text" value="{{value}}"/>'
+                });
+                
+                domTimeout(function () {
+                    expect(container.childElementCount).to.equal(1);
+                    expect(container.children[0].nodeName).to.equal('INPUT');
+                    expect(container.children[0].value).to.equal('');
+                })
+                .then(function () {
+                    return domTimeout(function() {
+                        container.children[0].value = 'pesho';
+                        var evt = document.createEvent("HTMLEvents");
+                        evt.initEvent('change', false, true);
+                        container.children[0].dispatchEvent(evt);
+                    });
+                })
+                .then(function () {
+                    return domTimeout(function () {
+                        expect(container.children[0].value).to.equal('pesho');
+                        expect(obj.value).to.equal('pesho');
+                        testRef.once('value', function (snap) {
+                            var val = snap.val();
+                            expect(val.value).to.equal('pesho');
+                            expect(Object.keys(val).length).to.equal(1);
+                            done();
+                        });
+                    });
+                })
+                .catch(fail);
+            });
+            
+            it('should render a list', function (done) {
+                var container = getContainer();
+                obj = new FiresyncArray(testRef);
+                
+                obj.bindTo({
+                    el: container,
+                    template: '<ul>' + 
+                        '{{#iterator}}' + 
+                        '<li>{{value}}</li>' +
+                        '{{/iterator}}' +
+                        '</ul>'
+                });
+
+                obj.add({value: 1});
+                obj.add({value: 2});
+                obj.add({value: 3});
+                
+                domTimeout(function () {
+                    expect(container.children[0]).to.be.ok(); 
+                    expect(container.children[0].children.length).to.equal(3);
+                    expect(container.children[0].children[0].innerHTML).to.equal('1');
+                    obj.update({
+                        value: 5
+                    }, 0);
+                })
+                .then(function () {
+                    return domTimeout(function () {
+                        expect(container.children[0].children[0].innerHTML).to.equal('5');
+                        testRef.once('value', function (snap) {
+                            var val = snap.val();
+                            expect(atIndex(val, 0).value).to.equal(5);
+                            expect(Object.keys(atIndex(val, 0)).length).to.equal(1);
+                            expect(atIndex(val, 1).value).to.equal(2);
+                            expect(Object.keys(val).length).to.equal(3);
+                            done();
+                        })
+                    }, null, 300);   
+                })
+                .catch(fail);
             });
         });    
     }
