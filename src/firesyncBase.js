@@ -1,11 +1,11 @@
 'use strict';
 
-const EventEmitter2 = require('eventemitter2').EventEmitter2;
-const _ = require('lodash');
-const queue = require('queue');
-const Ractive = require('ractive/ractive.min');
-
+import { EventEmitter2 } from 'eventemitter2';
+import _ from 'lodash';
+import queue from 'queue';
+import Ractive from 'ractive/ractive.min';
 import { FiresyncBinding } from './firesyncBinding.js'
+import * as constants from './constants.js';
 
 /**
  * FirebaseRef object
@@ -35,17 +35,8 @@ class FiresyncBase extends EventEmitter2 {
         this.$$.loaded = false;
         this.$$.bindings = [];
 
-        this.$$.FILTERED_PROPERTIES = new Set(['$$', '_events', 'newListener', 'event']);
-        this.$$.BINDING_TYPE = { FIREBASE: 'FIREBASE', DOM: 'DOM' };
-        this.$$.BINDING_TARGET = _.extend({ ANY: 'ANY' }, this.$$.BINDING_TYPE);
-        this.$$.CHANGE_ORIGIN = { LOCAL: 'LOCAL', FOREIGN: 'FOREIGN' };
-        this.$$.FIREBASE_EVENT = {
-            CHILD_ADDED: 'child_added',
-            CHILD_REMOVED: 'child_removed',
-            CHILD_CHANGED: 'child_changed'
-        };
 
-        this.$$.CHANGE_TYPE = { ADD: 'add', DELETE: 'delete', UPDATE: 'update' }; //Object.observe
+        this.$$.FILTERED_PROPERTIES = new Set(['$$', '_events', 'newListener', 'event']);
 
         let firebaseBinding = this._attach();
         this._attachBindings(firebaseBinding);
@@ -83,27 +74,26 @@ class FiresyncBase extends EventEmitter2 {
         let ractive = new Ractive(settings);
         let reactiveListeners = new Map();
 
-        let binding = {
-            type: this.$$.BINDING_TYPE.DOM,
-            data: { ractive },
-            updateLocal: (property, value) => {
-                return new Promise((resolve) => {
-                    this[property] = value;
-                    resolve();
-                });
-            },
-            updateForeign: (property, value) => {
-                return new Promise((resolve) => {
-                    ractive.set(property, value);
-                    resolve();
-                })
-            },
-            detach: () => {
-                for (var observer of reactiveListeners.values()) {
-                    observer.cancel();
-                }
+        let binding = new FiresyncBinding(constants.BINDING_TYPE.DOM, {ractive, settings}, this);
+        binding.updateLocal((property, value) => {
+            return new Promise((resolve) => {
+                this[property] = value;
+                resolve();
+            });
+        });
+            
+        binding.updateForeign((property, value) => {
+            return new Promise((resolve) => {
+                ractive.set(property, value);
+                resolve();
+            })
+        });
+        
+        binding.detach(() => {
+            for (var observer of reactiveListeners.values()) {
+                observer.cancel();
             }
-        };
+        });
 
         let applyObserve = (value, key) => {
             let initialObserve = true;
@@ -161,19 +151,19 @@ class FiresyncBase extends EventEmitter2 {
             this._fireLoaded();
         });
 
-        let firebaseBinding = new FiresyncBinding(this.$$.BINDING_TYPE.FIREBASE, {ref: this.$$.ref});
+        let firebaseBinding = new FiresyncBinding(constants.BINDING_TYPE.FIREBASE, {ref: this.$$.ref}, this);
         let handlersMap = new Map();
 
         firebaseBinding.updateForeign((property, value, type) => {
             return new Promise((resolve) => {
                 let updateVal = {};
                 switch (type) {
-                    case this.$$.CHANGE_TYPE.UPDATE:
-                    case this.$$.CHANGE_TYPE.ADD: {
+                    case constants.CHANGE_TYPE.UPDATE:
+                    case constants.CHANGE_TYPE.ADD: {
                         updateVal[property] = value;
                         break;
                     }
-                    case this.$$.CHANGE_TYPE.DELETE: {
+                    case constants.CHANGE_TYPE.DELETE: {
                         updateVal[property] = null;
                         break;
                     }
@@ -190,7 +180,7 @@ class FiresyncBase extends EventEmitter2 {
             }
         });
 
-        [this.$$.FIREBASE_EVENT.CHILD_ADDED, this.$$.FIREBASE_EVENT.CHILD_REMOVED, this.$$.FIREBASE_EVENT.CHILD_CHANGED]
+        [constants.FIREBASE_EVENT.CHILD_ADDED, constants.FIREBASE_EVENT.CHILD_REMOVED, constants.FIREBASE_EVENT.CHILD_CHANGED]
             .forEach((event) => {
                 let handler = (snap, prevChild) => {
                     let property = snap.key();
@@ -198,22 +188,22 @@ class FiresyncBase extends EventEmitter2 {
                     let type;
 
                     switch (event) {
-                        case this.$$.FIREBASE_EVENT.CHILD_ADDED: {
-                            type = this.$$.CHANGE_TYPE.ADD;
+                        case constants.FIREBASE_EVENT.CHILD_ADDED: {
+                            type = constants.CHANGE_TYPE.ADD;
                             break;
                         }
-                        case this.$$.FIREBASE_EVENT.CHILD_REMOVED: {
-                            type = this.$$.CHANGE_TYPE.DELETE;
+                        case constants.FIREBASE_EVENT.CHILD_REMOVED: {
+                            type = constants.CHANGE_TYPE.DELETE;
                             break;
                         }
-                        case this.$$.FIREBASE_EVENT.CHILD_CHANGED: {
-                            type = this.$$.CHANGE_TYPE.UPDATE;
+                        case constants.FIREBASE_EVENT.CHILD_CHANGED: {
+                            type = constants.CHANGE_TYPE.UPDATE;
                             break;
                         }
                         default: break;
                     }
 
-                    this._updateBindings({ property, value, type, prevChild }, this.$$.CHANGE_ORIGIN.FOREIGN);
+                    this._updateBindings({ property, value, type, prevChild }, constants.CHANGE_ORIGIN.FOREIGN);
                 };
 
                 handlersMap.set(event, handler);
@@ -223,7 +213,7 @@ class FiresyncBase extends EventEmitter2 {
         return this._addBinding(firebaseBinding);
     }
 
-    _updateBindings(changes, origin, target = this.$$.BINDING_TARGET.ANY) {
+    _updateBindings(changes, origin, target = constants.BINDING_TARGET.ANY) {
         return new Promise((resolve) => {
             let bindingQueue = queue();
 
@@ -235,7 +225,7 @@ class FiresyncBase extends EventEmitter2 {
 
                     let bindingResolvedPromises = [];
 
-                    if (binding.type === target || target === this.$$.BINDING_TARGET.ANY) {
+                    if (binding.type === target || target === constants.BINDING_TARGET.ANY) {
                         binding.begin(origin);
                         changes = Array.isArray(changes) ? changes : [changes];
                         changes.forEach((change) => {
@@ -243,11 +233,12 @@ class FiresyncBase extends EventEmitter2 {
                             let value = change.value;
                             let type = change.type;
                             let additionalData = {};
+                            
                             additionalData.prevChild = change.prevChild;
                             additionalData.origin = origin;
                             additionalData.target = target;
 
-                            if (origin === this.$$.CHANGE_ORIGIN.LOCAL) {
+                            if (origin === constants.CHANGE_ORIGIN.LOCAL) {
                                 bindingResolvedPromises.push(binding.updateForeign(property, value, type, additionalData));
                             } else {
                                 bindingResolvedPromises.push(binding.updateLocal(property, value, type, additionalData));
@@ -314,7 +305,7 @@ class FiresyncBase extends EventEmitter2 {
     *_enumerate(obj = this) {
         for (let i in obj) {
             if (obj.hasOwnProperty(i)
-                && this.$$.FILTERED_PROPERTIES.indexOf(i) === -1) {
+                && !this.$$.FILTERED_PROPERTIES.has(i)) {
                 yield i;
             }
         }

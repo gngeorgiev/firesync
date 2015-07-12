@@ -5,14 +5,13 @@ var babelify = require('babelify');
 var source = require('vinyl-source-stream');
 var rename = require('gulp-rename');
 var exorcist = require('exorcist');
-var plumber = require('gulp-plumber');
 
 gulp.task('watch', ['build'], function () {
     gulp.watch('./src/*.js', ['build'], {partial: true});
 });
 
 gulp.task('watch:test', function () {
-    gulp.watch(['./src/*.js', './test/*.js'], ['build', 'test'], {partial: true});
+    gulp.watch(['./src/*.js', './test/*.js'], ['build', 'test'], { partial: true, interval: 1500 });
 });
 
 gulp.task('build', function () {
@@ -27,7 +26,7 @@ gulp.task('build', function () {
     }));
 
     bundler.bundle()
-        .pipe(plumber())
+        .on('error', console.log)
         .pipe(exorcist('./dist/firesync.js.map'))
         .pipe(source(main))
         .pipe(rename('./firesync.js'))

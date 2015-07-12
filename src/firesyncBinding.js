@@ -1,13 +1,31 @@
 'use strict';
 
+import * as constants from './constants.js'
+
 class FiresyncBinding {
-    constructor(type, data) {
+    constructor(type, data, context) {
 
         this.type = type;
         this.data = data;
-        this._updateLocal = null;
         this._updateForeign = null;
         this._detach = null;
+        
+        this._updateLocal = function(property, value, type) {
+            return new Promise((resolve) => {
+                switch (type) {
+                    case constants.CHANGE_TYPE.UPDATE:
+                    case constants.CHANGE_TYPE.ADD: {
+                        this[property] = value;
+                        break;
+                    }
+                    case constants.CHANGE_TYPE.DELETE: {
+                        delete this[property];
+                        break;
+                    }
+                    default: break;
+                }
+            });
+        }.bind(context);
 
         this.inProgress = false;
         this.origin = null;

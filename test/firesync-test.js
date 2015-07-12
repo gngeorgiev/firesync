@@ -64,9 +64,59 @@ describe('Firesync tests', function() {
         testRef.remove(done);
     });
 
-    describe('DOM binding', function () {
-
-    });
+    if (typeof require === 'undefined') {
+        var mainContainer = document.createElement('div');
+        mainContainer.setAttribute('id', 'container');
+        document.body.appendChild(mainContainer);
+        
+        var createElement = function (el) {
+            var element = document.createElement(el);
+            mainContainer.appendChild(element);
+            return element;
+        }
+        
+        var getContainer = function () {
+            return createElement('div');
+        }
+        
+        describe.skip('DOM binding', function () {
+            
+            afterEach(function () {
+                mainContainer.innerHTML = '';
+            });
+            
+            it('should create an input without binding', function(done) {
+                var container = getContainer();
+                obj = new FiresyncObject(testRef).bindTo({
+                    el: container,
+                    template: '<input type="text" />'
+                });
+                
+                setTimeout(function () {
+                    expect(container.childElementCount).to.equal(1);
+                    expect(container.children[0].nodeName).to.equal('INPUT');
+                    done();
+                }, 100);
+            });
+            
+            it('should create an input with value binding', function (done) {
+                var container = getContainer();
+                obj = new FiresyncObject(testRef).bindTo({
+                    el: container,
+                    template: '<input type="text" value="{{value}}"/>'
+                });
+                
+                obj.value = 'pesho';
+                
+                setTimeout(function () {
+                    expect(container.childElementCount).to.equal(1);
+                    expect(container.children[0].nodeName).to.equal('INPUT');
+                    expect(container.children[0].value).to.equal('pesho');
+                    done();
+                }, 100);
+            });
+        });    
+    }
 
     describe('Firebase binding', function () {
         describe('firesyncObject ', function() {
