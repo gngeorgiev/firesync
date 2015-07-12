@@ -2,6 +2,7 @@
 
 import { FiresyncBase } from './firesyncBase.js';
 import { FiresyncObject } from './firesyncObject.js';
+import * as constants from './constants.js';
 
 import mixins from 'es6-mixins';
 import _ from 'lodash';
@@ -45,14 +46,14 @@ class FiresyncArray extends FiresyncBase {
         super._fireChanged([{
             name: 'value',
             object: val,
-            type: this.$$.CHANGE_TYPE.UPDATE
+            type: constants.CHANGE_TYPE.UPDATE
         }]);
 
         return super._updateBindings({
             property: key,
             value: val,
-            type: this.$$.CHANGE_TYPE.UPDATE
-        }, this.$$.CHANGE_ORIGIN.LOCAL, this.$$.BINDING_TARGET.FIREBASE);
+            type: constants.CHANGE_TYPE.UPDATE
+        }, constants.CHANGE_ORIGIN.LOCAL, constants.BINDING_TARGET.FIREBASE);
     }
 
     add(value, key = this.$$.ref.push().key(), index = this.$$.indeces.size + 1) {
@@ -63,14 +64,14 @@ class FiresyncArray extends FiresyncBase {
         super._fireChanged([{
             name: 'length',
             object: value,
-            type: this.$$.CHANGE_TYPE.ADD
+            type: constants.CHANGE_TYPE.ADD
         }]);
 
         return super._updateBindings({
             property: key,
             value: value,
-            type: this.$$.CHANGE_TYPE.ADD
-        }, this.$$.CHANGE_ORIGIN.LOCAL, this.$$.BINDING_TARGET.FIREBASE);
+            type: constants.CHANGE_TYPE.ADD
+        }, constants.CHANGE_ORIGIN.LOCAL, constants.BINDING_TARGET.FIREBASE);
     }
 
     remove(identifier) {
@@ -85,14 +86,14 @@ class FiresyncArray extends FiresyncBase {
         super._fireChanged([{
             name: 'length',
             object: null,
-            type: this.$$.CHANGE_TYPE.DELETE,
+            type: constants.CHANGE_TYPE.DELETE,
             oldValue: oldValue
         }]);
 
         return super._updateBindings({
             property: key,
-            type: this.$$.CHANGE_TYPE.DELETE
-        }, this.$$.CHANGE_ORIGIN.LOCAL, this.$$.BINDING_TARGET.FIREBASE);
+            type: constants.CHANGE_TYPE.DELETE
+        }, constants.CHANGE_ORIGIN.LOCAL, constants.BINDING_TARGET.FIREBASE);
     }
 
     _getIndex(identifier) {
@@ -117,17 +118,17 @@ class FiresyncArray extends FiresyncBase {
                 let index = this.$$.indeces.get(child) || 0;
 
                 switch (type) {
-                    case this.$$.CHANGE_TYPE.UPDATE: {
+                    case constants.CHANGE_TYPE.UPDATE: {
                         this[index] = value;
                         this.$$.indeces.set(property, index);
                         this.$$.keys.set(index, property);
                         break;
                     }
-                    case this.$$.CHANGE_TYPE.ADD: {
+                    case constants.CHANGE_TYPE.ADD: {
                         this.add(value, ++index, property);
                         break;
                     }
-                    case this.$$.CHANGE_TYPE.DELETE: {
+                    case constants.CHANGE_TYPE.DELETE: {
                         this.remove(index);
                         break;
                     }

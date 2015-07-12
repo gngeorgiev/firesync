@@ -1,6 +1,7 @@
 'use strict';
 
 import { FiresyncBase } from './firesyncBase.js';
+import * as constants from './constants.js';
 
 /**
  * @class FiresyncObject
@@ -32,27 +33,8 @@ class FiresyncObject extends FiresyncBase {
                     };
                 });
 
-                this._updateBindings(updateArgs, this.$$.CHANGE_ORIGIN.LOCAL);
+                this._updateBindings(updateArgs, constants.CHANGE_ORIGIN.LOCAL);
             }
-        });
-
-        firebaseBinding.updateLocal((property, value, type) => {
-            return new Promise((resolve) => {
-                switch (type) {
-                    case this.$$.CHANGE_TYPE.UPDATE:
-                    case this.$$.CHANGE_TYPE.ADD: {
-                        this[property] = value;
-                        break;
-                    }
-                    case this.$$.CHANGE_TYPE.DELETE: {
-                        delete this[property];
-                        break;
-                    }
-                    default: break;
-                }
-
-                resolve();
-            });
         });
     }
 }
