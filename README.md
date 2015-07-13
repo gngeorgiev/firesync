@@ -14,7 +14,7 @@
 
 The illustration below should help you understand how **firesync** works.
 
-![firesync](https://dl.dropboxusercontent.com/1/view/vy837kvpxutynns/Apps/Shutter/Drawing%20%281%29.png)
+![firesync](http://s12.postimg.org/gdw7mp19p/Drawing_1.png)
 
 #Three-way-data-binding
 ---
@@ -600,6 +600,17 @@ RactiveJs object
 
 **Kind**: global external  
 **See**: [http://docs.ractivejs.org/latest/get-started](http://docs.ractivejs.org/latest/get-started)  
+
+# Development and testing
+
+The source code is located in the `src` folder.
+
+```shell
+$ npm install
+$ gulp build #builds the source code
+$ gulp test #executes the tests
+$ gulp watch #builds the source code as you change it
+```
 
 # License
 ---
