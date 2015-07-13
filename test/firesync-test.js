@@ -29,7 +29,7 @@ var handleCb = function (cb) {
         if (err) {
             return fail(err);
         }
-
+        
         cb();
     }
 };

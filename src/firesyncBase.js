@@ -12,6 +12,12 @@ import * as constants from './constants.js';
  * @external FirebaseRef
  * @see {@link https://www.firebase.com/docs/web/api/firebase/child.html}
  */
+ 
+ /**
+  * RactiveJs object
+  * @external RactiveJs
+  * @see {@link http://docs.ractivejs.org/latest/get-started}
+  */
 
 /**
  * @class FiresyncBase
@@ -57,13 +63,22 @@ class FiresyncBase extends EventEmitter2 {
     }
 
     /**
-     * Detaches from the subscribed events to the {@link FirebaseRef}
+     * Detaches from the subscribed Firebase and DOM events. Must be called
+     * if the object will no longer be used.
      */
     detach() {
         this.$$.bindings.forEach((binding) => binding.detach());
         this.$$.bindings = [];
     }
 
+    /**
+     * Binds to DOM templates using {@link RactiveJs}. The settings are passed directly
+     * to {@link RactiveJs}.
+     * @param {Object} settings - The settings passed to {@link RactiveJs}. Refer to the
+     * {@link RactiveJs} docs for more details
+     * @returns {FiresyncBase} The current instance.
+     * @example new (FiresyncObject|FiresyncArray).bindTo({ el: 'body', template: '<input value={{value}}/>' })
+     */
     bindTo(settings) {
         _.extend(settings, {
             data: this
@@ -108,27 +123,6 @@ class FiresyncBase extends EventEmitter2 {
         
         this._addBinding(domBinding);
         return this;
-    }
-
-    /**
-     * Applies a value to the object.
-     * @param {object} val
-     * @example firebaseObject.set({value: 1});
-     */
-    set(val) {
-        return this._setLocal(val);
-    }
-
-    setRemote(val) {
-        return this._setRemote(val);
-    }
-
-    update(val) {
-        return this._updateLocal(val);
-    }
-
-    updateRemote(val) {
-        return this._updateRemote(val);
     }
 
     _addBinding(binding) {
@@ -223,6 +217,21 @@ class FiresyncBase extends EventEmitter2 {
                         case constants.FIREBASE_EVENT.CHILD_CHANGED: {
                             type = constants.CHANGE_TYPE.UPDATE;
                             break;
+                        }
+                        case constants.FIREBASE_EVENT.CHILD_MOVED: {
+                            return this._updateBindings({ 
+                                property, 
+                                value, 
+                                type: constants.CHANGE_TYPE.DELETE
+                            }, constants.CHANGE_TYPE.FOREIGN)
+                                .then(() => {
+                                    this._updateBindings({
+                                        property,
+                                        value,
+                                        prevChild,
+                                        type: constants.CHANGE_TYPE.ADD
+                                    }, constants.CHANGE_TYPE.FOREIGN);        
+                                });
                         }
                         default: break;
                     }

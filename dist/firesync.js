@@ -32785,6 +32785,16 @@ var _lodash = require('lodash');
 var _lodash2 = _interopRequireDefault(_lodash);
 
 /**
+ * Identifier {object|string|number}
+ * @external identifier
+ * An identifier to find an item in the array. First the key of the element will be tried
+ * to match with the identifier, then `firesyncarray.indexOf(identifier)` will be used 
+ * to find the element and if the identifier is a number it will be directly used as an index.
+ * If you are storing integers in the array use the {FiresyncArray.prototype.key} method first
+ * to get the correct key.
+ */
+
+/**
  * @class FiresyncArray
  * @classdesc An array which keeps its values synchronized with the remote.
  * One should use the {@link FiresyncArray} methods to manipulate the values.
@@ -32792,6 +32802,7 @@ var _lodash2 = _interopRequireDefault(_lodash);
  * @extends FiresyncBase
  * @example new firesync.FiresyncArray(ref);
  * @memberof firesync
+ * @mixes Array
  */
 
 var FiresyncArray = (function (_FiresyncBase) {
@@ -32804,6 +32815,11 @@ var FiresyncArray = (function (_FiresyncBase) {
         this.$$.keys = new _Map();
         this.$$.FILTERED_PROPERTIES.add('iterator');
 
+        /**
+         * @property {Array} iterator A simple array which is in sync with the {FiresyncArray}.
+         * Used for DOM Binding since RactiveJs does not support array mixins.
+         * @example firesyncArray.bindTo({el: 'body', template: '{{#iterator}}<div>{{value}}</div>{{/iterator}}'});
+         */
         this.iterator = [];
     }
 
@@ -32811,6 +32827,12 @@ var FiresyncArray = (function (_FiresyncBase) {
 
     _createClass(FiresyncArray, [{
         key: 'key',
+
+        /**
+         * Returns a key by a specified index.
+         * @returns {string} The key of the object at the specified index.
+         * @example firesyncArray.key(0) === '-Ju5kIB-e3ZABIccrOjK';
+         */
         value: function key(index) {
             if (typeof index !== 'number') {
                 index = this.indexOf(index);
@@ -32820,6 +32842,14 @@ var FiresyncArray = (function (_FiresyncBase) {
         }
     }, {
         key: 'update',
+
+        /**
+         * Update an object using a specified identifier. This is the only supported way
+         * to update an element inside {FiresyncArray}. Keeps the synchronization.
+         * @param {any} value The update value.
+         * @param {Identifier} identifier The identifier to be used to find the element.
+         * @returns {Promise} For when the synchronization is complete.
+         */
         value: function update(value, identifier) {
             var index = this._getIndex(identifier);
             var key = this.key(index);
@@ -32848,6 +32878,16 @@ var FiresyncArray = (function (_FiresyncBase) {
         }
     }, {
         key: 'add',
+
+        /**
+         * Adds an element to the {FiresyncArray}. By default generates Firebase arrays with
+         * standard Firebase-generated keys. This is the only supported way
+         * to add an element inside {FiresyncArray}. Keeps the synchronization.
+         * @param {any} value The value to add to the arary.
+         * @param {string} [key=ref.push().key()] The key to be used for the element. Default key is recommended.
+         * @param {number} [index=last] The index at which to add the element to the local array.
+         * @returns {Promise} For when the synchronization is complete.
+         */
         value: function add(value) {
             var key = arguments.length <= 1 || arguments[1] === undefined ? this.$$.ref.push().key() : arguments[1];
             var index = arguments.length <= 2 || arguments[2] === undefined ? this.$$.indeces.size + 1 : arguments[2];
@@ -32871,6 +32911,12 @@ var FiresyncArray = (function (_FiresyncBase) {
         }
     }, {
         key: 'remove',
+
+        /**
+         * Removes an element from the array by an {Identifier}
+         * @param {Identifier} identifier The identifier to find the array by.
+         * @returns {Promise} For when the synchronization is complete.
+         */
         value: function remove(identifier) {
             var index = this._getIndex(identifier);
             var key = this.key(index);
@@ -32890,6 +32936,47 @@ var FiresyncArray = (function (_FiresyncBase) {
                 property: key,
                 type: constants.CHANGE_TYPE.DELETE
             }, constants.CHANGE_ORIGIN.LOCAL, constants.BINDING_TARGET.FIREBASE);
+        }
+    }, {
+        key: 'move',
+
+        /**
+         * Moves an element from one index to another.
+         * @param {Identifier} oldIdentifier The identifier for the old object.
+         * @param {Identifier} newIdentifier The identifier for the new object.
+         * @returns {Promise} For when the synchronization is complete.
+         */
+        value: function move(oldIdentifier, newIdentifier) {
+            var oldIndex = this._getIndex(oldIdentifier);
+            var newIndex = this._getIndex(newIdentifier);
+
+            this._move(this, oldIndex, newIndex);
+            this._move(this.iterator, oldIndex, newIndex);
+
+            var key = this.key(oldIndex);
+            this.$$.indeces['delete'](oldIndex);
+            this.$$.keys['delete'](key);
+
+            this.$$.indeces.set(key, newIndex);
+            this.$$.keys.set(newIndex, key);
+
+            _get(Object.getPrototypeOf(FiresyncArray.prototype), '_fireChanged', this).call(this, [{
+                name: 'value',
+                object: this[newIndex],
+                type: constants.CHANGE_TYPE.UPDATE
+            }]);
+
+            return _get(Object.getPrototypeOf(FiresyncArray.prototype), '_updateBindings', this).call(this, {
+                property: key,
+                type: constants.CHANGE_TYPE.UPDATE
+            }, constants.CHANGE_ORIGIN.LOCAL, constants.BINDING_TARGET.FIREBASE);
+        }
+    }, {
+        key: '_move',
+        value: function _move(arr, fromIndex, toIndex) {
+            var element = arr[fromIndex];
+            arr.splice(fromIndex, 1);
+            arr.splice(toIndex, 0, element);
         }
     }, {
         key: '_getIndex',
@@ -32920,7 +33007,7 @@ var FiresyncArray = (function (_FiresyncBase) {
                     switch (type) {
                         case constants.CHANGE_TYPE.UPDATE:
                             {
-                                _this[index] = value;
+                                _this.update(value, index);
                                 _this.$$.indeces.set(property, index);
                                 _this.$$.keys.set(index, property);
                                 break;
@@ -33010,6 +33097,12 @@ var constants = _interopRequireWildcard(_constantsJs);
  */
 
 /**
+ * RactiveJs object
+ * @external RactiveJs
+ * @see {@link http://docs.ractivejs.org/latest/get-started}
+ */
+
+/**
  * @class FiresyncBase
  * @classdesc Base class for all Firesync objects. Any change made to this object will
  * affect the remote data and any change made on the remote data will affect this object.
@@ -33064,7 +33157,8 @@ var FiresyncBase = (function (_EventEmitter2) {
         key: 'detach',
 
         /**
-         * Detaches from the subscribed events to the {@link FirebaseRef}
+         * Detaches from the subscribed Firebase and DOM events. Must be called
+         * if the object will no longer be used.
          */
         value: function detach() {
             this.$$.bindings.forEach(function (binding) {
@@ -33074,6 +33168,15 @@ var FiresyncBase = (function (_EventEmitter2) {
         }
     }, {
         key: 'bindTo',
+
+        /**
+         * Binds to DOM templates using {RactiveJs}. The settings are passed directly
+         * to {RactiveJs}.
+         * @param {Object} settings - The settings passed to {RactiveJs}. Refer to the
+         * {RactiveJs} docs for more details
+         * @returns {FiresyncBase} The current instance.
+         * @example new (FiresyncObject|FiresyncArray).bindTo({ el: 'body', template: '<input value={{value}}/>' })
+         */
         value: function bindTo(settings) {
             var _this = this;
 
@@ -33117,32 +33220,6 @@ var FiresyncBase = (function (_EventEmitter2) {
 
             this._addBinding(domBinding);
             return this;
-        }
-    }, {
-        key: 'set',
-
-        /**
-         * Applies a value to the object.
-         * @param {object} val
-         * @example firebaseObject.set({value: 1});
-         */
-        value: function set(val) {
-            return this._setLocal(val);
-        }
-    }, {
-        key: 'setRemote',
-        value: function setRemote(val) {
-            return this._setRemote(val);
-        }
-    }, {
-        key: 'update',
-        value: function update(val) {
-            return this._updateLocal(val);
-        }
-    }, {
-        key: 'updateRemote',
-        value: function updateRemote(val) {
-            return this._updateRemote(val);
         }
     }, {
         key: '_addBinding',
@@ -33267,6 +33344,21 @@ var FiresyncBase = (function (_EventEmitter2) {
                             {
                                 type = constants.CHANGE_TYPE.UPDATE;
                                 break;
+                            }
+                        case constants.FIREBASE_EVENT.CHILD_MOVED:
+                            {
+                                return _this2._updateBindings({
+                                    property: property,
+                                    value: value,
+                                    type: constants.CHANGE_TYPE.DELETE
+                                }, constants.CHANGE_TYPE.FOREIGN).then(function () {
+                                    _this2._updateBindings({
+                                        property: property,
+                                        value: value,
+                                        prevChild: prevChild,
+                                        type: constants.CHANGE_TYPE.ADD
+                                    }, constants.CHANGE_TYPE.FOREIGN);
+                                });
                             }
                         default:
                             break;
@@ -33636,8 +33728,6 @@ var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default
 
 var _interopRequireWildcard = require('babel-runtime/helpers/interop-require-wildcard')['default'];
 
-var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
-
 Object.defineProperty(exports, '__esModule', {
     value: true
 });
@@ -33648,13 +33738,9 @@ var _constantsJs = require('./constants.js');
 
 var constants = _interopRequireWildcard(_constantsJs);
 
-var _lodash = require('lodash');
-
-var _lodash2 = _interopRequireDefault(_lodash);
-
 /**
  * @class FiresyncObject
- * @classdesc An object which keeps its values synchronized with the remote.
+ * @classdesc An object which keeps its values synchronized with the remote Firebase.
  * @protected
  * @extends FiresyncBase
  * @memberof firesync
@@ -33670,6 +33756,54 @@ var FiresyncObject = (function (_FiresyncBase) {
     _inherits(FiresyncObject, _FiresyncBase);
 
     _createClass(FiresyncObject, [{
+        key: 'set',
+
+        /**
+         * Applies a value to the object. Clears all other properties, only the new
+         * ones are preserved
+         * @param {object} val
+         * @example firebaseObject.set({value: 1});
+         */
+        value: function set(val) {
+            return _get(Object.getPrototypeOf(FiresyncObject.prototype), '_setLocal', this).call(this, val);
+        }
+    }, {
+        key: 'setRemote',
+
+        /**
+         * Applies a value to the remote {FirebaseRef}. Clears all other properties, only the new
+         * ones are preserved 
+         * @param {object} val
+         * @example firebaseObject.setRemote({value: 1});
+         */
+        value: function setRemote(val) {
+            return _get(Object.getPrototypeOf(FiresyncObject.prototype), '_setRemote', this).call(this, val);
+        }
+    }, {
+        key: 'update',
+
+        /**
+         * Applies a value to the object. Keeps old properties and applies the new
+         * ones on top.
+         * @param {object} val
+         * @example firebaseObject.update({value: 1});
+         */
+        value: function update(val) {
+            return _get(Object.getPrototypeOf(FiresyncObject.prototype), '_updateLocal', this).call(this, val);
+        }
+    }, {
+        key: 'updateRemote',
+
+        /**
+         * Applies a value to the remote {FirebaseRef}. Keeps old properties and applies the new
+         * ones on top.
+         * @param {object} val
+         * @example firebaseObject.updateRemote({value: 1});
+         */
+        value: function updateRemote(val) {
+            return _get(Object.getPrototypeOf(FiresyncObject.prototype), '_updateRemote', this).call(this, val);
+        }
+    }, {
         key: '_attachBindings',
         value: function _attachBindings(firebaseBinding) {
             var _this = this;
@@ -33685,6 +33819,6 @@ var FiresyncObject = (function (_FiresyncBase) {
 
 exports.FiresyncObject = FiresyncObject;
 
-},{"./constants.js":82,"./firesyncBase.js":85,"babel-runtime/helpers/class-call-check":12,"babel-runtime/helpers/create-class":13,"babel-runtime/helpers/get":14,"babel-runtime/helpers/inherits":15,"babel-runtime/helpers/interop-require-default":16,"babel-runtime/helpers/interop-require-wildcard":17,"lodash":78}]},{},[83])(83)
+},{"./constants.js":82,"./firesyncBase.js":85,"babel-runtime/helpers/class-call-check":12,"babel-runtime/helpers/create-class":13,"babel-runtime/helpers/get":14,"babel-runtime/helpers/inherits":15,"babel-runtime/helpers/interop-require-wildcard":17}]},{},[83])(83)
 });
 //# sourceMappingURL=firesync.js.map
