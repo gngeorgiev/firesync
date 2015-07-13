@@ -16,6 +16,10 @@ The illustration below should help you understand how **firesync** works.
 
 ![firesync](https://dl.dropboxusercontent.com/1/view/vy837kvpxutynns/Apps/Shutter/Drawing%20%281%29.png)
 
+#Three-way-data-binding
+---
+The **three-way-data-binding** is a binding where the **model**, **view** and **database** are all updated simulateniously without extra code. **Firesync** achieves this by using [RactiveJS](http://ractivejs.org) for its DOM binding. One should be familiar with [RactiveJS](http://ractivejs.org) when using the dom binding.
+
 # Requirements
 ---
 **firesync** runs equally well in browsers and in node. Since it uses `Object.observe` to watch for local changes a polyfill should be used in environments that do not support it.
@@ -34,6 +38,9 @@ The illustration below should help you understand how **firesync** works.
 `var firesync = require('firesync-node');`
 
 # Examples
+---
+
+### Firebase to Firesync
 
 Basic
 ```js
@@ -103,21 +110,111 @@ if (!users.loaded()) {
 }
 ```
 
-Binding to an input element:
+### Firebase to Firesync to DOM
+
+Binding to an input element with inline template:
 ```html
-<input type="text" id="input" />
+<div id="container"></div>
 ```
 
 ```js
 var ref = new Firebase('https://example.firebaseio.com');
+var bindChild = ref.child('currentItem'); // { value: 'test' }
 
-var $input = document.querySelector('#input');
-var currentItem = new firesync.FiresyncObject(ref.child('currentItem')).bindTo($input, {
-    localAttr: 'text' //bind to the property text of the FiresyncObject
-});
+var currentItem = new firesync.FiresyncObject(bindChild)
+    .bindTo({
+        el: '#container',
+        template: '<input type="text" value="{{value}}" />'
+    });
 
-//changing the value in the input will result in the following item locally and remotely {text: 'inputText'}
+//this results in the following html <div id="container"><input type="text" value="test" /></div>
+
+currentItem.value = 'test123';
+
+//this results in the following html <div id="container"><input type="text" value="test123" /></div>
+
+//writing in the input will also change the .value property
 ```
+
+Binding to an input element with external template:
+```html
+<div id="container"></div>
+
+<script type="text/ractive" id="template">
+    <input type="text" value="{{value}}" />
+</script>
+```
+
+```js
+var ref = new Firebase('https://example.firebaseio.com');
+var bindChild = ref.child('currentItem'); // { value: 'test' }
+
+var currentItem = new firesync.FiresyncObject(bindChild)
+    .bindTo({
+        el: '#container',
+        template: '#template'
+    });
+
+//this results in the following html <div id="container"><input type="text" value="test" /></div>
+
+currentItem.value = 'test123';
+
+//this results in the following html <div id="container"><input type="text" value="test123" /></div>
+
+//writing in the input will also change the .value property
+```
+
+Bind to a list. 
+```html
+<div id="container"></div>
+
+<script type="text/ractive" id="template">
+    <ul>
+        {{#iterator}} //iterator is a built-in variable of FiresyncArray which is an iteratable array compatible with ractivejs since ractivejs does not support array mixins.
+        <li>{{value}}</li>
+        {{/iterator}}
+    </ul>
+</script>
+```
+
+```js
+var ref = new Firebase('https://example.firebaseio.com');
+var bindChild = ref.child('currentItem'); // { '-Ju5kIB-e3ZABIccrOjK': { value: 'test' }, '-Mb4kIBa-3ZABIaarOjK': { value: 'test2' } }
+
+var array = new firesync.FiresyncArray(bindChild)
+    .bindTo({
+        el: '#container',
+        template: '#template'
+    });
+
+/* 
+* this results in the following html:
+* <div id="container">
+*   <ul>
+*       <li>test</li>
+*       <li>test2</li>
+*   </ul>
+* </div>
+*/
+
+array.add({value: 'test3'});
+
+/* 
+* this results in the following html:
+* <div id="container">
+*   <ul>
+*       <li>test</li>
+*       <li>test2</li>
+*       <li>test3</li>
+*   </ul>
+* </div>
+*
+* And to something like this in the firebase: 
+* { '-Ju5kIB-e3ZABIccrOjK': { value: 'test' }, '-Mb4kIBa-3ZABIaarOjK': { value: 'test2' }, '-Vb6kFBa-3ZABIaarOmH': { value: 'test2' } }
+*/
+```
+
+### Firesync utility methods
 
 `firesync.create` - Automatically creates a synchronized object or array based on the underlying firebase value. The created
 objects are guaranteed to be loaded.
