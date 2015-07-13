@@ -10,7 +10,6 @@
   "author": "gngeorgiev.it@gmail.com",
   "license": "MIT",
   "devDependencies": {
-    "babel": "^5.6.14",
     "babel-runtime": "^5.6.15",
     "babelify": "^6.1.2",
     "browserify": "^10.2.4",
@@ -19,13 +18,15 @@
     "firebase": "^2.2.7",
     "gulp": "^3.9.0",
     "gulp-browserify": "^0.5.1",
-    "gulp-insert": "^0.4.0",
     "gulp-mocha": "^2.1.2",
     "gulp-rename": "^1.2.2",
-    "regeneratorify": "0.0.2",
     "vinyl-source-stream": "^1.1.0"
   },
   "dependencies": {
-    "eventemitter2": "^0.4.14"
+    "es6-mixins": "^1.0.2",
+    "eventemitter2": "^0.4.14",
+    "lodash": "^3.10.0",
+    "queue": "^3.1.0",
+    "ractive": "^0.7.3"
   }
 }

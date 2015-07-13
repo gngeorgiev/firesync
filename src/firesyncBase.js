@@ -1,12 +1,23 @@
 'use strict';
 
-let EventEmitter2 = require('eventemitter2').EventEmitter2;
+import { EventEmitter2 } from 'eventemitter2';
+import _ from 'lodash';
+import queue from 'queue';
+import Ractive from 'ractive';
+import { FiresyncBinding } from './firesyncBinding.js'
+import * as constants from './constants.js';
 
 /**
  * FirebaseRef object
  * @external FirebaseRef
  * @see {@link https://www.firebase.com/docs/web/api/firebase/child.html}
  */
+ 
+ /**
+  * RactiveJs object
+  * @external RactiveJs
+  * @see {@link http://docs.ractivejs.org/latest/get-started}
+  */
 
 /**
  * @class FiresyncBase
@@ -23,20 +34,16 @@ class FiresyncBase extends EventEmitter2 {
     constructor(ref) {
         super();
 
-        this.__$$ = {};
-        this.__$$.ref = ref;
-        this.__$$.applying = false;
-        this.__$$.loaded = false;
-        this.__$$.setRemoteAfterLoad = false;
-        this.__$$.suspendObservers = false;
-        this.__$$.refChangedCb = null;
-        this.__$$.FILTERED_PROPERTIES = ['__$$', '_events', 'newListener', 'event'];
+        this.$$ = {};
+        this.$$.ref = ref;
+        this.$$.loaded = false;
+        this.$$.bindings = [];
 
-        this._attach();
-    }
 
-    val() {
-        throw new Error('val is not implemented');
+        this.$$.FILTERED_PROPERTIES = new Set(['$$', '_events', 'newListener', 'event', 'iterator']);
+
+        let firebaseBinding = this._attach();
+        this._attachBindings(firebaseBinding);
     }
 
     /**
@@ -44,7 +51,7 @@ class FiresyncBase extends EventEmitter2 {
      * @returns {boolean}
      */
     loaded() {
-        return this.__$$.loaded;
+        return this.$$.loaded;
     }
 
     /**
@@ -52,57 +59,238 @@ class FiresyncBase extends EventEmitter2 {
      * @returns {FirebaseRef}
      */
     ref() {
-        return this.__$$.ref;
+        return this.$$.ref;
     }
 
     /**
-     * Detaches from the subscribed events to the {@link FirebaseRef}
+     * Detaches from the subscribed Firebase and DOM events. Must be called
+     * if the object will no longer be used.
      */
     detach() {
-        return this.__$$.ref.off('value', this.__$$.refChangedCb);
+        this.$$.bindings.forEach((binding) => binding.detach());
+        this.$$.bindings = [];
     }
 
     /**
-     * Applies a value to the object.
-     * @param {object} val
-     * @example firebaseObject.set({value: 1});
+     * Binds to DOM templates using {@link RactiveJs}. The settings are passed directly
+     * to {@link RactiveJs}.
+     * @param {Object} settings - The settings passed to {@link RactiveJs}. Refer to the
+     * {@link RactiveJs} docs for more details
+     * @returns {FiresyncBase} The current instance.
+     * @example new (FiresyncObject|FiresyncArray).bindTo({ el: 'body', template: '<input value={{value}}/>' })
      */
-    set(val) {
-        return this._setLocal(val);
+    bindTo(settings) {
+        _.extend(settings, {
+            data: this
+        });
+
+        let ractive = new Ractive(settings);
+        let reactiveListeners = new Map();
+
+        let domBinding = new FiresyncBinding(constants.BINDING_TYPE.DOM, {ractive, settings}, this);
+        domBinding.updateLocal((property, value) => {
+            return new Promise((resolve) => {
+                if (ractive.get(property) === value) {
+                    return resolve();
+                }
+                
+                if (this[property] === value) {
+                    //we need to fire the bindings ourselves since the 
+                    //Object.observe callback will not be invoked
+                    
+                    this._updateBindings({
+                        property,
+                        value,
+                        type: constants.CHANGE_TYPE.UPDATE
+                    }, 
+                    constants.CHANGE_ORIGIN.LOCAL, 
+                    constants.BINDING_TARGET.DOM,
+                    true);
+                } else {
+                    this[property] = value;    
+                }
+                
+                resolve();
+            });
+        });
+            
+        domBinding.updateForeign((property, value) => {
+            return new Promise((resolve) => {
+                ractive.set(property, value);
+                resolve();
+            })
+        });
+        
+        this._addBinding(domBinding);
+        return this;
+    }
+
+    _addBinding(binding) {
+        this.$$.bindings.push(binding);
+        return binding;
+    }
+
+    _attachBindings(binding) {
+        throw new Error('_attachBindings not implemented');
     }
 
     _attach() {
-        this.__$$.refChangedCb = (snap) => {
-            let val = snap.val();
+        Object.observe(this, (args) => {
+            let filteredArgs = _.chain(args)
+            .filter((arg) => {
+                return !this.$$.FILTERED_PROPERTIES.has(arg.name);
+            })
+            .unique((arg) => {
+                return arg.name; 
+            })
+            .value();
 
-            if (!this.__$$.loaded) {
-                this.__$$.loaded = true;
-                return this._fireLoaded(val);
+            if (filteredArgs.length) {
+                this._fireChanged(args);
+                let updateArgs = filteredArgs.map((arg) => {
+                    let updateArg = {
+                        property: arg.name,
+                        value: this[arg.name],
+                        oldValue: arg.oldValue
+                    };
+                    
+                    updateArg.type = _.isNull(updateArg.value) || _.isUndefined(updateArg.value) ? 
+                        constants.CHANGE_TYPE.DELETE : constants.CHANGE_TYPE.UPDATE;
+                    
+                    return updateArg;
+                });
+
+                this.emit('_object.observe', updateArgs);
             }
+        });
+        
+        this.$$.ref.once('value', () => {
+            this.$$.loaded = true;
+            this._fireLoaded();
+        });
 
-            if (this.__$$.suspendObservers) {
-                return this.__$$.suspendObservers = false;
+        let firebaseBinding = new FiresyncBinding(constants.BINDING_TYPE.FIREBASE, {ref: this.$$.ref}, this);
+        let handlersMap = new Map();
+
+        firebaseBinding.updateForeign((property, value, type) => {
+            return new Promise((resolve) => {
+                let updateVal = {};
+                switch (type) {
+                    case constants.CHANGE_TYPE.UPDATE:
+                    case constants.CHANGE_TYPE.ADD: {
+                        updateVal[property] = value;
+                        break;
+                    }
+                    case constants.CHANGE_TYPE.DELETE: {
+                        updateVal[property] = null;
+                        break;
+                    }
+                    default: break;
+                }
+
+                this._updateRemote(updateVal, resolve);
+            });
+        });
+
+        firebaseBinding.detach(() => {
+            for (let [event, handler] of handlersMap.entries()) {
+                this.$$.ref.off(event, handler);
             }
+        });
 
-            this.__$$.suspendObservers = true;
-            this._setLocal(val);
-            this._fireChanged();
-        };
+        [constants.FIREBASE_EVENT.CHILD_ADDED, constants.FIREBASE_EVENT.CHILD_REMOVED, constants.FIREBASE_EVENT.CHILD_CHANGED]
+            .forEach((event) => {
+                let handler = (snap, prevChild) => {
+                    let property = snap.key();
+                    let value = snap.val();
+                    let type;
 
-        this.__$$.ref.on('value', this.__$$.refChangedCb);
+                    switch (event) {
+                        case constants.FIREBASE_EVENT.CHILD_ADDED: {
+                            type = constants.CHANGE_TYPE.ADD;
+                            break;
+                        }
+                        case constants.FIREBASE_EVENT.CHILD_REMOVED: {
+                            type = constants.CHANGE_TYPE.DELETE;
+                            break;
+                        }
+                        case constants.FIREBASE_EVENT.CHILD_CHANGED: {
+                            type = constants.CHANGE_TYPE.UPDATE;
+                            break;
+                        }
+                        case constants.FIREBASE_EVENT.CHILD_MOVED: {
+                            return this._updateBindings({ 
+                                property, 
+                                value, 
+                                type: constants.CHANGE_TYPE.DELETE
+                            }, constants.CHANGE_TYPE.FOREIGN)
+                                .then(() => {
+                                    this._updateBindings({
+                                        property,
+                                        value,
+                                        prevChild,
+                                        type: constants.CHANGE_TYPE.ADD
+                                    }, constants.CHANGE_TYPE.FOREIGN);        
+                                });
+                        }
+                        default: break;
+                    }
 
-        Object.observe(this, () => {
-            this._fireChanged();
+                    this._updateBindings({ property, value, type, prevChild }, constants.CHANGE_ORIGIN.FOREIGN);
+                };
 
-            if (!this.__$$.loaded) {
-                return this.__$$.setRemoteAfterLoad = true;
-            }
+                handlersMap.set(event, handler);
+                this.$$.ref.on(event, handler);
+            });
 
-            if (this.__$$.suspendObservers) {
-                return this.__$$.suspendObservers = false;
-            }
+        return this._addBinding(firebaseBinding);
+    }
 
-            this._setRemoteCore();
+    _updateBindings(changes, origin, target = constants.BINDING_TARGET.ANY, force = false) {
+        return new Promise((resolve) => {
+            let bindingQueue = queue();
+
+            this.$$.bindings.forEach((binding) => {
+                let queuedBinding = (cb) => {
+                    if (binding.inProgress && binding.origin !== origin && !force) {
+                        return cb();
+                    }
+
+                    let bindingResolvedPromises = [];
+
+                    if (binding.type === target || target === constants.BINDING_TARGET.ANY) {
+                        binding.begin(origin);
+                        changes = Array.isArray(changes) ? changes : [changes];
+                        changes.forEach((change) => {
+                            let property = change.property;
+                            let value = change.value;
+                            let type = change.type;
+                            let additionalData = {};
+                            
+                            additionalData.prevChild = change.prevChild;
+                            additionalData.origin = origin;
+                            additionalData.target = target;
+
+                            if (origin === constants.CHANGE_ORIGIN.LOCAL) {
+                                bindingResolvedPromises.push(binding.updateForeign(property, value, type, additionalData));
+                            } else {
+                                bindingResolvedPromises.push(binding.updateLocal(property, value, type, additionalData));
+                            }
+                        });
+                    }
+
+                    Promise.all(bindingResolvedPromises).then(() => {
+                        binding.end();
+                        cb();
+                    });
+                };
+
+                bindingQueue.push(queuedBinding);
+            });
+
+            bindingQueue.start(() => {
+                resolve();
+            });
         });
     }
 
@@ -112,8 +300,8 @@ class FiresyncBase extends EventEmitter2 {
      * @event FiresyncBase#changed
      * @example firesyncObject.on('changed', function(){});
      */
-    _fireChanged() {
-        this.emit('changed');
+    _fireChanged(args) {
+        this.emit('changed', args);
     }
 
     /**
@@ -121,24 +309,19 @@ class FiresyncBase extends EventEmitter2 {
      * @event FiresyncBase#loaded
      * @example firesyncObject.on('loaded', function(){});
      */
-    _fireLoaded(val) {
-        if (this.__$$.setRemoteAfterLoad) {
-            this._setRemoteCore();
-        }
-
-        if (val) {
-            this._setLocal(val);
-        }
-
-        var emited = this.emit('loaded');
+    _fireLoaded() {
+        let emited = this.emit('loaded');
         if (!emited) {
-            this.once('newListener', (ev) => {
+            let newListenerCb = (ev) => {
                 if (ev === 'loaded') {
+                    this.off('newListener', newListenerCb);
                     setTimeout(() => {
                         this.emit('loaded');
-                    }, 100);
+                    }, 20);
                 }
-            });
+            };
+
+            this.on('newListener', newListenerCb);
         }
     }
 
@@ -155,29 +338,41 @@ class FiresyncBase extends EventEmitter2 {
     *_enumerate(obj = this) {
         for (let i in obj) {
             if (obj.hasOwnProperty(i)
-                && this.__$$.FILTERED_PROPERTIES.indexOf(i) === -1) {
+                && !this.$$.FILTERED_PROPERTIES.has(i)) {
                 yield i;
             }
         }
     }
 
     _setRemoteCore() {
-        this.__$$.suspendObservers = true;
-        this._setRemote((err) => {
-            this._fireSynced(err);
+        return new Promise((resolve) => {
+            this._setRemote((err) => {
+                this._fireSynced(err);
+                resolve();
+            });
         });
     }
 
-    _setRemote(cb) {
-        this.__$$.ref.set(this.val(), cb);
+    _setRemote(cb, val) {
+        this.$$.ref.set(val, cb);
+    }
+
+    _updateRemote(val, cb) {
+        this.$$.ref.update(val, (err) => {
+            this._fireSynced(err);
+            cb();
+        });
+    }
+
+    _updateLocal(obj) {
+        for (let i of this._enumerate(obj)) {
+            this[i] = obj[i];
+        }
     }
 
     _setLocal(obj) {
         this._clear();
-
-        for (let i of this._enumerate(obj)) {
-            this[i] = obj[i];
-        }
+        this._updateLocal(obj);
     }
 
     _clear() {
@@ -187,4 +382,4 @@ class FiresyncBase extends EventEmitter2 {
     }
 }
 
-export { FiresyncBase }
+export { FiresyncBase };

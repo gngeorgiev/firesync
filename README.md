@@ -10,7 +10,15 @@
 
 
 ---
-**firesync** is a library for seamless data synchronization between **[Firebase](http://firebase.com)** and your local data. When a <a href="#firesync.FiresyncObject">FiresyncObject</a> or <a href="#firesync.FiresyncArray">FiresyncArray</a> is created this object is observed for changes. At the same time the <a href="#external_FirebaseRef">FirebaseRef</a> is also observed. When a change in the one end happens, the data is immediately synchronized to the other end, eliminating the need to explicitly subscribe to events in order to update objects.
+**firesync** is a library for seamless data synchronization between **[Firebase](http://firebase.com)** your local data and optionally the DOM, without the need of a framework, also known as **three-way-data-binding**. 
+
+The illustration below should help you understand how **firesync** works.
+
+![firesync](https://dl.dropboxusercontent.com/1/view/vy837kvpxutynns/Apps/Shutter/Drawing%20%281%29.png)
+
+#Three-way-data-binding
+---
+The **three-way-data-binding** is a binding where the **model**, **view** and **database** are all updated simulateniously without extra code. **Firesync** achieves this by using [RactiveJS](http://ractivejs.org) for its DOM binding. One should be familiar with [RactiveJS](http://ractivejs.org) when using the dom binding.
 
 # Requirements
 ---
@@ -30,6 +38,9 @@
 `var firesync = require('firesync-node');`
 
 # Examples
+---
+
+### Firebase to Firesync
 
 Basic
 ```js
@@ -99,7 +110,113 @@ if (!users.loaded()) {
 }
 ```
 
-Firesync.create - Automatically creates a synchronized object or array based on the underlying firebase value. The created
+### Firebase to Firesync to DOM
+
+Binding to an input element with inline template:
+```html
+<div id="container"></div>
+```
+
+```js
+var ref = new Firebase('https://example.firebaseio.com');
+var bindChild = ref.child('currentItem'); // { value: 'test' }
+
+var currentItem = new firesync.FiresyncObject(bindChild)
+    .bindTo({
+        el: '#container',
+        template: '<input type="text" value="{{value}}" />'
+    });
+
+//this results in the following html <div id="container"><input type="text" value="test" /></div>
+
+currentItem.value = 'test123';
+
+//this results in the following html <div id="container"><input type="text" value="test123" /></div>
+
+//writing in the input will also change the .value property
+```
+
+Binding to an input element with external template:
+```html
+<div id="container"></div>
+
+<script type="text/ractive" id="template">
+    <input type="text" value="{{value}}" />
+</script>
+```
+
+```js
+var ref = new Firebase('https://example.firebaseio.com');
+var bindChild = ref.child('currentItem'); // { value: 'test' }
+
+var currentItem = new firesync.FiresyncObject(bindChild)
+    .bindTo({
+        el: '#container',
+        template: '#template'
+    });
+
+//this results in the following html <div id="container"><input type="text" value="test" /></div>
+
+currentItem.value = 'test123';
+
+//this results in the following html <div id="container"><input type="text" value="test123" /></div>
+
+//writing in the input will also change the .value property
+```
+
+Bind to a list. 
+```html
+<div id="container"></div>
+
+<script type="text/ractive" id="template">
+    <ul>
+        {{#iterator}} //iterator is a built-in variable of FiresyncArray which is an iteratable array compatible with ractivejs since ractivejs does not support array mixins.
+        <li>{{value}}</li>
+        {{/iterator}}
+    </ul>
+</script>
+```
+
+```js
+var ref = new Firebase('https://example.firebaseio.com');
+var bindChild = ref.child('currentItem'); // { '-Ju5kIB-e3ZABIccrOjK': { value: 'test' }, '-Mb4kIBa-3ZABIaarOjK': { value: 'test2' } }
+
+var array = new firesync.FiresyncArray(bindChild)
+    .bindTo({
+        el: '#container',
+        template: '#template'
+    });
+
+/* 
+* this results in the following html:
+* <div id="container">
+*   <ul>
+*       <li>test</li>
+*       <li>test2</li>
+*   </ul>
+* </div>
+*/
+
+array.add({value: 'test3'});
+
+/* 
+* this results in the following html:
+* <div id="container">
+*   <ul>
+*       <li>test</li>
+*       <li>test2</li>
+*       <li>test3</li>
+*   </ul>
+* </div>
+*
+* And to something like this in the firebase: 
+* { '-Ju5kIB-e3ZABIccrOjK': { value: 'test' }, '-Mb4kIBa-3ZABIaarOjK': { value: 'test2' }, '-Vb6kFBa-3ZABIaarOmH': { value: 'test2' } }
+*/
+```
+
+### Firesync utility methods
+
+`firesync.create` - Automatically creates a synchronized object or array based on the underlying firebase value. The created
 objects are guaranteed to be loaded.
 ```js
 var ref = new Firebase('https://example.firebaseio.com/users/fred'); //{name: 'fred'}
@@ -119,7 +236,7 @@ firesync.create(usersRef)
 
 ```
 
-Firesync.map - Returns a non-synchronized object or array, depending on the underlying firebase value. Each object in the
+`firesync.map` - Returns a non-synchronized object or array, depending on the underlying firebase value. Each object in the
 returned object/array is a synchronized <a href="#firesync.FiresyncObject">FiresyncObject</a> or <a href="#firesync.FiresyncArray">FiresyncArray</a>
 depending on the underlying firebase value. The objects are guaranteed to be loaded.
 ```js
@@ -162,6 +279,9 @@ Whenever you are done with any <a href="#firesync.FiresyncObject">FiresyncObject
 <dt><a href="#external_FirebaseRef">FirebaseRef</a></dt>
 <dd><p>FirebaseRef object</p>
 </dd>
+<dt><a href="#external_RactiveJs">RactiveJs</a></dt>
+<dd><p>RactiveJs object</p>
+</dd>
 </dl>
 <a name="firesync"></a>
 ## firesync
@@ -171,10 +291,16 @@ The entry point of firesync.
 
 * [firesync](#firesync)
   * [.FiresyncArray](#firesync.FiresyncArray) ⇐ <code>[FiresyncBase](#new_FiresyncBase_new)</code>
+    * [.iterator](#firesync.FiresyncArray+iterator) : <code>Array</code>
+    * [.key()](#firesync.FiresyncArray+key) ⇒ <code>string</code>
+    * [.update(value, identifier)](#firesync.FiresyncArray+update) ⇒ <code>Promise</code>
+    * [.add(value, [key], [index])](#firesync.FiresyncArray+add) ⇒ <code>Promise</code>
+    * [.remove(identifier)](#firesync.FiresyncArray+remove) ⇒ <code>Promise</code>
+    * [.move(oldIdentifier, newIdentifier)](#firesync.FiresyncArray+move) ⇒ <code>Promise</code>
     * [.loaded()](#FiresyncBase+loaded) ⇒ <code>boolean</code>
     * [.ref()](#FiresyncBase+ref) ⇒ <code>FirebaseRef</code>
     * [.detach()](#FiresyncBase+detach)
-    * [.set(val)](#FiresyncBase+set)
+    * [.bindTo(settings)](#FiresyncBase+bindTo) ⇒ <code>[FiresyncBase](#new_FiresyncBase_new)</code>
     * ["changed"](#FiresyncBase+event_changed)
     * ["loaded"](#FiresyncBase+event_loaded)
     * ["synced" (err)](#FiresyncBase+event_synced)
@@ -182,7 +308,7 @@ The entry point of firesync.
     * [.loaded()](#FiresyncBase+loaded) ⇒ <code>boolean</code>
     * [.ref()](#FiresyncBase+ref) ⇒ <code>FirebaseRef</code>
     * [.detach()](#FiresyncBase+detach)
-    * [.set(val)](#FiresyncBase+set)
+    * [.bindTo(settings)](#FiresyncBase+bindTo) ⇒ <code>[FiresyncBase](#new_FiresyncBase_new)</code>
     * ["changed"](#FiresyncBase+event_changed)
     * ["loaded"](#FiresyncBase+event_loaded)
     * ["synced" (err)](#FiresyncBase+event_synced)
@@ -196,16 +322,93 @@ One should use the [FiresyncArray](FiresyncArray) methods to manipulate the valu
 
 **Kind**: static class of <code>[firesync](#firesync)</code>  
 **Extends:** <code>[FiresyncBase](#new_FiresyncBase_new)</code>  
+**Mixes**: <code>Array</code>  
 **Access:** protected  
 
 * [.FiresyncArray](#firesync.FiresyncArray) ⇐ <code>[FiresyncBase](#new_FiresyncBase_new)</code>
+  * [.iterator](#firesync.FiresyncArray+iterator) : <code>Array</code>
+  * [.key()](#firesync.FiresyncArray+key) ⇒ <code>string</code>
+  * [.update(value, identifier)](#firesync.FiresyncArray+update) ⇒ <code>Promise</code>
+  * [.add(value, [key], [index])](#firesync.FiresyncArray+add) ⇒ <code>Promise</code>
+  * [.remove(identifier)](#firesync.FiresyncArray+remove) ⇒ <code>Promise</code>
+  * [.move(oldIdentifier, newIdentifier)](#firesync.FiresyncArray+move) ⇒ <code>Promise</code>
   * [.loaded()](#FiresyncBase+loaded) ⇒ <code>boolean</code>
   * [.ref()](#FiresyncBase+ref) ⇒ <code>FirebaseRef</code>
   * [.detach()](#FiresyncBase+detach)
-  * [.set(val)](#FiresyncBase+set)
+  * [.bindTo(settings)](#FiresyncBase+bindTo) ⇒ <code>[FiresyncBase](#new_FiresyncBase_new)</code>
   * ["changed"](#FiresyncBase+event_changed)
   * ["loaded"](#FiresyncBase+event_loaded)
   * ["synced" (err)](#FiresyncBase+event_synced)
+
+<a name="firesync.FiresyncArray+iterator"></a>
+#### firesyncArray.iterator : <code>Array</code>
+A simple array which is in sync with the [FiresyncArray](FiresyncArray).
+
+**Kind**: instance property of <code>[FiresyncArray](#firesync.FiresyncArray)</code>  
+**Example**  
+```js
+firesyncArray.bindTo({el: 'body', template: '{{#iterator}}<div>{{value}}</div>{{/iterator}}'});
+```
+<a name="firesync.FiresyncArray+key"></a>
+#### firesyncArray.key() ⇒ <code>string</code>
+Returns a key by a specified index.
+
+**Kind**: instance method of <code>[FiresyncArray](#firesync.FiresyncArray)</code>  
+**Returns**: <code>string</code> - The key of the object at the specified index.  
+**Example**  
+```js
+firesyncArray.key(0) === '-Ju5kIB-e3ZABIccrOjK';
+```
+<a name="firesync.FiresyncArray+update"></a>
+#### firesyncArray.update(value, identifier) ⇒ <code>Promise</code>
+Update an object using a specified identifier. This is the only supported way
+to update an element inside {FiresyncArray}. Keeps the synchronization.
+
+**Kind**: instance method of <code>[FiresyncArray](#firesync.FiresyncArray)</code>  
+**Returns**: <code>Promise</code> - For when the synchronization is complete.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| value | <code>any</code> | The update value. |
+| identifier | <code>Identifier</code> | The identifier to be used to find the element. |
+
+<a name="firesync.FiresyncArray+add"></a>
+#### firesyncArray.add(value, [key], [index]) ⇒ <code>Promise</code>
+Adds an element to the {FiresyncArray}. By default generates Firebase arrays with
+standard Firebase-generated keys. This is the only supported way
+to add an element inside {FiresyncArray}. Keeps the synchronization.
+
+**Kind**: instance method of <code>[FiresyncArray](#firesync.FiresyncArray)</code>  
+**Returns**: <code>Promise</code> - For when the synchronization is complete.  
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| value | <code>any</code> |  | The value to add to the arary. |
+| [key] | <code>string</code> | <code>&quot;ref.push().key()&quot;</code> | The key to be used for the element. Default key is recommended. |
+| [index] | <code>number</code> | <code>last</code> | The index at which to add the element to the local array. |
+
+<a name="firesync.FiresyncArray+remove"></a>
+#### firesyncArray.remove(identifier) ⇒ <code>Promise</code>
+Removes an element from the array by an {Identifier}
+
+**Kind**: instance method of <code>[FiresyncArray](#firesync.FiresyncArray)</code>  
+**Returns**: <code>Promise</code> - For when the synchronization is complete.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| identifier | <code>Identifier</code> | The identifier to find the array by. |
+
+<a name="firesync.FiresyncArray+move"></a>
+#### firesyncArray.move(oldIdentifier, newIdentifier) ⇒ <code>Promise</code>
+Moves an element from one index to another.
+
+**Kind**: instance method of <code>[FiresyncArray](#firesync.FiresyncArray)</code>  
+**Returns**: <code>Promise</code> - For when the synchronization is complete.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| oldIdentifier | <code>Identifier</code> | The identifier for the old object. |
+| newIdentifier | <code>Identifier</code> | The identifier for the new object. |
 
 <a name="FiresyncBase+loaded"></a>
 #### firesyncArray.loaded() ⇒ <code>boolean</code>
@@ -219,22 +422,25 @@ Returns the ref set in the constructor
 **Kind**: instance method of <code>[FiresyncArray](#firesync.FiresyncArray)</code>  
 <a name="FiresyncBase+detach"></a>
 #### firesyncArray.detach()
-Detaches from the subscribed events to the [FirebaseRef](FirebaseRef)
+Detaches from the subscribed Firebase and DOM events. Must be called
+if the object will no longer be used.
 
 **Kind**: instance method of <code>[FiresyncArray](#firesync.FiresyncArray)</code>  
-<a name="FiresyncBase+set"></a>
-#### firesyncArray.set(val)
-Applies a value to the object.
+<a name="FiresyncBase+bindTo"></a>
+#### firesyncArray.bindTo(settings) ⇒ <code>[FiresyncBase](#new_FiresyncBase_new)</code>
+Binds to DOM templates using [RactiveJs](RactiveJs). The settings are passed directly
+to [RactiveJs](RactiveJs).
 
 **Kind**: instance method of <code>[FiresyncArray](#firesync.FiresyncArray)</code>  
+**Returns**: <code>[FiresyncBase](#new_FiresyncBase_new)</code> - The current instance.  
 
-| Param | Type |
-| --- | --- |
-| val | <code>object</code> | 
+| Param | Type | Description |
+| --- | --- | --- |
+| settings | <code>Object</code> | The settings passed to [RactiveJs](RactiveJs). Refer to the [RactiveJs](RactiveJs) docs for more details |
 
 **Example**  
 ```js
-firebaseObject.set({value: 1});
+new (FiresyncObject|FiresyncArray).bindTo({ el: 'body', template: '<input value={{value}}/>' })
 ```
 <a name="FiresyncBase+event_changed"></a>
 #### "changed"
@@ -271,7 +477,7 @@ firesyncObject.on('synced', function(err){});
 ```
 <a name="firesync.FiresyncObject"></a>
 ### firesync.FiresyncObject ⇐ <code>[FiresyncBase](#new_FiresyncBase_new)</code>
-An object which keeps its values synchronized with the remote.
+An object which keeps its values synchronized with the remote Firebase.
 
 **Kind**: static class of <code>[firesync](#firesync)</code>  
 **Extends:** <code>[FiresyncBase](#new_FiresyncBase_new)</code>  
@@ -281,7 +487,7 @@ An object which keeps its values synchronized with the remote.
   * [.loaded()](#FiresyncBase+loaded) ⇒ <code>boolean</code>
   * [.ref()](#FiresyncBase+ref) ⇒ <code>FirebaseRef</code>
   * [.detach()](#FiresyncBase+detach)
-  * [.set(val)](#FiresyncBase+set)
+  * [.bindTo(settings)](#FiresyncBase+bindTo) ⇒ <code>[FiresyncBase](#new_FiresyncBase_new)</code>
   * ["changed"](#FiresyncBase+event_changed)
   * ["loaded"](#FiresyncBase+event_loaded)
   * ["synced" (err)](#FiresyncBase+event_synced)
@@ -298,22 +504,25 @@ Returns the ref set in the constructor
 **Kind**: instance method of <code>[FiresyncObject](#firesync.FiresyncObject)</code>  
 <a name="FiresyncBase+detach"></a>
 #### firesyncObject.detach()
-Detaches from the subscribed events to the [FirebaseRef](FirebaseRef)
+Detaches from the subscribed Firebase and DOM events. Must be called
+if the object will no longer be used.
 
 **Kind**: instance method of <code>[FiresyncObject](#firesync.FiresyncObject)</code>  
-<a name="FiresyncBase+set"></a>
-#### firesyncObject.set(val)
-Applies a value to the object.
+<a name="FiresyncBase+bindTo"></a>
+#### firesyncObject.bindTo(settings) ⇒ <code>[FiresyncBase](#new_FiresyncBase_new)</code>
+Binds to DOM templates using [RactiveJs](RactiveJs). The settings are passed directly
+to [RactiveJs](RactiveJs).
 
 **Kind**: instance method of <code>[FiresyncObject](#firesync.FiresyncObject)</code>  
+**Returns**: <code>[FiresyncBase](#new_FiresyncBase_new)</code> - The current instance.  
 
-| Param | Type |
-| --- | --- |
-| val | <code>object</code> | 
+| Param | Type | Description |
+| --- | --- | --- |
+| settings | <code>Object</code> | The settings passed to [RactiveJs](RactiveJs). Refer to the [RactiveJs](RactiveJs) docs for more details |
 
 **Example**  
 ```js
-firebaseObject.set({value: 1});
+new (FiresyncObject|FiresyncArray).bindTo({ el: 'body', template: '<input value={{value}}/>' })
 ```
 <a name="FiresyncBase+event_changed"></a>
 #### "changed"
@@ -384,7 +593,13 @@ firesync.map(ref).then(function(objOrArr){});
 FirebaseRef object
 
 **Kind**: global external  
-**See**: [https://www.firebase.com/docs/web/api/firebase/child.html](https://www.firebase.com/docs/web/api/firebase/child.html)   
+**See**: [https://www.firebase.com/docs/web/api/firebase/child.html](https://www.firebase.com/docs/web/api/firebase/child.html)  
+<a name="external_RactiveJs"></a>
+## RactiveJs
+RactiveJs object
+
+**Kind**: global external  
+**See**: [http://docs.ractivejs.org/latest/get-started](http://docs.ractivejs.org/latest/get-started)  
 
 # License
 ---
