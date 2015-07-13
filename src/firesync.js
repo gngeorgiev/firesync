@@ -53,7 +53,6 @@ function map(ref) {
 
             if (val) {
                 let promises = Object.keys(val).map((k) => {
-                    let v = val[k];
                     let childRef = ref.child(k);
 
                     return new Promise((r) => {
@@ -91,4 +90,4 @@ function map(ref) {
     });
 }
 
-export { FiresyncObject, FiresyncArray, create, map }
+export { FiresyncObject, FiresyncArray, create, map };
