@@ -601,6 +601,17 @@ RactiveJs object
 **Kind**: global external  
 **See**: [http://docs.ractivejs.org/latest/get-started](http://docs.ractivejs.org/latest/get-started)  
 
+# Development and testing
+
+The source code is located in the `src` folder.
+
+```shell
+$ npm install
+$ gulp build #builds the source code
+$ gulp test #executes the tests
+$ gulp watch #builds the source code as you change it
+```
+
 # License
 ---
 The MIT License (MIT)
