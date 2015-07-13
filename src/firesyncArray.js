@@ -15,11 +15,6 @@ import _ from 'lodash';
  * If you are storing integers in the array use the {FiresyncArray.prototype.key} method first
  * to get the correct key.
  */
- 
- /**
-  * 
-  * 
-  */
 
 /**
  * @class FiresyncArray

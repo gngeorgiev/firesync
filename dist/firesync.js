@@ -32630,7 +32630,8 @@ constants.CHANGE_ORIGIN = { LOCAL: 'LOCAL', FOREIGN: 'FOREIGN' };
 constants.FIREBASE_EVENT = {
     CHILD_ADDED: 'child_added',
     CHILD_REMOVED: 'child_removed',
-    CHILD_CHANGED: 'child_changed'
+    CHILD_CHANGED: 'child_changed',
+    CHILD_MOVED: 'child_moved'
 };
 
 constants.CHANGE_TYPE = { ADD: 'add', DELETE: 'delete', UPDATE: 'update' }; //Object.observe
@@ -32816,8 +32817,10 @@ var FiresyncArray = (function (_FiresyncBase) {
         this.$$.FILTERED_PROPERTIES.add('iterator');
 
         /**
-         * @property {Array} iterator A simple array which is in sync with the {FiresyncArray}.
-         * Used for DOM Binding since RactiveJs does not support array mixins.
+         * @member {Array} iterator A simple array which is in sync with the {@link FiresyncArray}.
+         * @memberof firesync.FiresyncArray
+         * @instance
+         * Used for DOM Binding since {@link RactiveJs} does not support array mixins.
          * @example firesyncArray.bindTo({el: 'body', template: '{{#iterator}}<div>{{value}}</div>{{/iterator}}'});
          */
         this.iterator = [];
@@ -32830,6 +32833,8 @@ var FiresyncArray = (function (_FiresyncBase) {
 
         /**
          * Returns a key by a specified index.
+         * @method key
+         * @memberof firesync.FiresyncArray.prototype
          * @returns {string} The key of the object at the specified index.
          * @example firesyncArray.key(0) === '-Ju5kIB-e3ZABIccrOjK';
          */
@@ -32846,6 +32851,8 @@ var FiresyncArray = (function (_FiresyncBase) {
         /**
          * Update an object using a specified identifier. This is the only supported way
          * to update an element inside {FiresyncArray}. Keeps the synchronization.
+         * @method update
+         * @memberof firesync.FiresyncArray.prototype
          * @param {any} value The update value.
          * @param {Identifier} identifier The identifier to be used to find the element.
          * @returns {Promise} For when the synchronization is complete.
@@ -32883,6 +32890,8 @@ var FiresyncArray = (function (_FiresyncBase) {
          * Adds an element to the {FiresyncArray}. By default generates Firebase arrays with
          * standard Firebase-generated keys. This is the only supported way
          * to add an element inside {FiresyncArray}. Keeps the synchronization.
+         * @method add
+         * @memberof firesync.FiresyncArray.prototype
          * @param {any} value The value to add to the arary.
          * @param {string} [key=ref.push().key()] The key to be used for the element. Default key is recommended.
          * @param {number} [index=last] The index at which to add the element to the local array.
@@ -32914,6 +32923,8 @@ var FiresyncArray = (function (_FiresyncBase) {
 
         /**
          * Removes an element from the array by an {Identifier}
+         * @method remove
+         * @memberof firesync.FiresyncArray.prototype
          * @param {Identifier} identifier The identifier to find the array by.
          * @returns {Promise} For when the synchronization is complete.
          */
@@ -32942,6 +32953,8 @@ var FiresyncArray = (function (_FiresyncBase) {
 
         /**
          * Moves an element from one index to another.
+         * @method move
+         * @memberof firesync.FiresyncArray.prototype
          * @param {Identifier} oldIdentifier The identifier for the old object.
          * @param {Identifier} newIdentifier The identifier for the new object.
          * @returns {Promise} For when the synchronization is complete.
@@ -33170,10 +33183,10 @@ var FiresyncBase = (function (_EventEmitter2) {
         key: 'bindTo',
 
         /**
-         * Binds to DOM templates using {RactiveJs}. The settings are passed directly
-         * to {RactiveJs}.
-         * @param {Object} settings - The settings passed to {RactiveJs}. Refer to the
-         * {RactiveJs} docs for more details
+         * Binds to DOM templates using {@link RactiveJs}. The settings are passed directly
+         * to {@link RactiveJs}.
+         * @param {Object} settings - The settings passed to {@link RactiveJs}. Refer to the
+         * {@link RactiveJs} docs for more details
          * @returns {FiresyncBase} The current instance.
          * @example new (FiresyncObject|FiresyncArray).bindTo({ el: 'body', template: '<input value={{value}}/>' })
          */

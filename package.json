@@ -1,6 +1,6 @@
 {
   "name": "firesync-node",
-  "version": "1.0.7",
+  "version": "1.1.0",
   "description": "firesync is a library for seamless data synchronization between Firebase and your local data.",
   "main": "dist/firesync.js",
   "repository": "https://github.com/gngeorgiev/firesync",
