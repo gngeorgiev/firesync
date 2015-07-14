@@ -39,7 +39,6 @@ class FiresyncBase extends EventEmitter2 {
         this.$$.loaded = false;
         this.$$.bindings = [];
 
-
         this.$$.FILTERED_PROPERTIES = new Set(['$$', '_events', 'newListener', 'event', 'iterator']);
 
         let firebaseBinding = this._attach();
@@ -85,7 +84,6 @@ class FiresyncBase extends EventEmitter2 {
         });
 
         let ractive = new Ractive(settings);
-        let reactiveListeners = new Map();
 
         let domBinding = new FiresyncBinding(constants.BINDING_TYPE.DOM, {ractive, settings}, this);
         domBinding.updateLocal((property, value) => {
@@ -122,7 +120,7 @@ class FiresyncBase extends EventEmitter2 {
         });
         
         this._addBinding(domBinding);
-        return this;
+        return ractive;
     }
 
     _addBinding(binding) {
@@ -261,22 +259,30 @@ class FiresyncBase extends EventEmitter2 {
                     if (binding.type === target || target === constants.BINDING_TARGET.ANY) {
                         binding.begin(origin);
                         changes = Array.isArray(changes) ? changes : [changes];
-                        changes.forEach((change) => {
-                            let property = change.property;
-                            let value = change.value;
-                            let type = change.type;
-                            let additionalData = {};
-                            
-                            additionalData.prevChild = change.prevChild;
-                            additionalData.origin = origin;
-                            additionalData.target = target;
 
-                            if (origin === constants.CHANGE_ORIGIN.LOCAL) {
-                                bindingResolvedPromises.push(binding.updateForeign(property, value, type, additionalData));
-                            } else {
-                                bindingResolvedPromises.push(binding.updateLocal(property, value, type, additionalData));
-                            }
-                        });
+                        changes
+                            .filter((change) => {
+                                let val = this[change.property];
+                                return !(val instanceof FiresyncBase);
+                            })
+                            .forEach((change) => {
+                                let property = change.property;
+                                let value = change.value;
+                                let type = change.type;
+                                let path = change.path;
+                                let additionalData = {};
+
+                                additionalData.prevChild = change.prevChild;
+                                additionalData.origin = origin;
+                                additionalData.target = target;
+                                additionalData.path = path;
+
+                                if (origin === constants.CHANGE_ORIGIN.LOCAL) {
+                                    bindingResolvedPromises.push(binding.updateForeign(property, value, type, additionalData));
+                                } else {
+                                    bindingResolvedPromises.push(binding.updateLocal(property, value, type, additionalData));
+                                }
+                            });
                     }
 
                     Promise.all(bindingResolvedPromises).then(() => {

@@ -1859,24 +1859,9 @@ var _Promise = require("babel-runtime/core-js/promise")["default"];
       var result = generator[method](arg);
       var value = result.value;
       return value instanceof AwaitArgument ? _Promise.resolve(value.arg).then(invokeNext, invokeThrow) : _Promise.resolve(value).then(function (unwrapped) {
-        // When a yielded Promise is resolved, its final value becomes
-        // the .value of the Promise<{value,done}> result for the
-        // current iteration. If the Promise is rejected, however, the
-        // result for this iteration will be rejected with the same
-        // reason. Note that rejections of yielded Promises are not
-        // thrown back into the generator function, as is the case
-        // when an awaited Promise is rejected. This difference in
-        // behavior between yield and await is important, because it
-        // allows the consumer to decide what to do with the yielded
-        // rejection (swallow it and continue, manually .throw it back
-        // into the generator, abandon iteration, whatever). With
-        // await, by contrast, there is no opportunity to examine the
-        // rejection reason outside the generator function, so the
-        // only option is to throw it from the await expression, and
-        // let the generator function handle the exception.
         result.value = unwrapped;
         return result;
-      });
+      }, invokeThrow);
     }
 
     if (typeof process === "object" && process.domain) {
@@ -1909,8 +1894,9 @@ var _Promise = require("babel-runtime/core-js/promise")["default"];
       });
 
       // Avoid propagating enqueueResult failures to Promises returned by
-      // later invocations of the iterator.
-      previousPromise = enqueueResult["catch"](function (ignored) {});
+      // later invocations of the iterator, and call generator.return() to
+      // allow the generator a chance to clean up.
+      previousPromise = enqueueResult["catch"](invokeReturn);
 
       return enqueueResult;
     }
@@ -1943,10 +1929,6 @@ var _Promise = require("babel-runtime/core-js/promise")["default"];
       }
 
       if (state === GenStateCompleted) {
-        if (method === "throw") {
-          throw arg;
-        }
-
         // Be forgiving, per 25.3.3.3.3 of the spec:
         // https://people.mozilla.org/~jorendorff/es6-draft.html#sec-generatorresume
         return doneResult();
@@ -2015,7 +1997,7 @@ var _Promise = require("babel-runtime/core-js/promise")["default"];
           if (state === GenStateSuspendedYield) {
             context.sent = arg;
           } else {
-            context.sent = undefined;
+            delete context.sent;
           }
         } else if (method === "throw") {
           if (state === GenStateSuspendedStart) {
@@ -2106,7 +2088,7 @@ var _Promise = require("babel-runtime/core-js/promise")["default"];
     // locations where there is no enclosing try statement.
     this.tryEntries = [{ tryLoc: "root" }];
     tryLocsList.forEach(pushTryEntry, this);
-    this.reset(true);
+    this.reset();
   }
 
   runtime.keys = function (object) {
@@ -2180,7 +2162,7 @@ var _Promise = require("babel-runtime/core-js/promise")["default"];
   Context.prototype = {
     constructor: Context,
 
-    reset: function reset(skipTempReset) {
+    reset: function reset() {
       this.prev = 0;
       this.next = 0;
       this.sent = undefined;
@@ -2189,13 +2171,10 @@ var _Promise = require("babel-runtime/core-js/promise")["default"];
 
       this.tryEntries.forEach(resetTryEntry);
 
-      if (!skipTempReset) {
-        for (var name in this) {
-          // Not sure about the optimal order of these conditions:
-          if (name.charAt(0) === "t" && hasOwn.call(this, name) && !isNaN(+name.slice(1))) {
-            this[name] = undefined;
-          }
-        }
+      // Pre-initialize at least 20 temporary variables to enable hidden
+      // class optimizations for simple generators.
+      for (var tempIndex = 0, tempName; hasOwn.call(this, tempName = "t" + tempIndex) || tempIndex < 20; ++tempIndex) {
+        this[tempName] = null;
       }
     },
 
@@ -32704,7 +32683,6 @@ function map(ref) {
 
             if (val) {
                 var promises = _Object$keys(val).map(function (k) {
-                    var v = val[k];
                     var childRef = ref.child(k);
 
                     return new _Promise(function (r) {
@@ -32749,9 +32727,9 @@ exports.map = map;
 },{"./firesyncArray.js":84,"./firesyncObject.js":87,"babel-runtime/core-js/object/keys":7,"babel-runtime/core-js/promise":8}],84:[function(require,module,exports){
 'use strict';
 
-var _get = require('babel-runtime/helpers/get')['default'];
-
 var _inherits = require('babel-runtime/helpers/inherits')['default'];
+
+var _get = require('babel-runtime/helpers/get')['default'];
 
 var _createClass = require('babel-runtime/helpers/create-class')['default'];
 
@@ -32898,8 +32876,8 @@ var FiresyncArray = (function (_FiresyncBase) {
          * @returns {Promise} For when the synchronization is complete.
          */
         value: function add(value) {
-            var key = arguments.length <= 1 || arguments[1] === undefined ? this.$$.ref.push().key() : arguments[1];
-            var index = arguments.length <= 2 || arguments[2] === undefined ? this.$$.indeces.size + 1 : arguments[2];
+            var key = arguments[1] === undefined ? this.$$.ref.push().key() : arguments[1];
+            var index = arguments[2] === undefined ? this.$$.indeces.size + 1 : arguments[2];
 
             this.splice(index, 0, value);
             this.iterator.splice(index, 0, value);
@@ -33055,9 +33033,9 @@ exports.FiresyncArray = FiresyncArray;
 },{"./constants.js":82,"./firesyncBase.js":85,"./firesyncObject.js":87,"babel-runtime/core-js/map":3,"babel-runtime/core-js/promise":8,"babel-runtime/helpers/class-call-check":12,"babel-runtime/helpers/create-class":13,"babel-runtime/helpers/get":14,"babel-runtime/helpers/inherits":15,"babel-runtime/helpers/interop-require-default":16,"babel-runtime/helpers/interop-require-wildcard":17,"es6-mixins":76,"lodash":78}],85:[function(require,module,exports){
 'use strict';
 
-var _get = require('babel-runtime/helpers/get')['default'];
-
 var _inherits = require('babel-runtime/helpers/inherits')['default'];
+
+var _get = require('babel-runtime/helpers/get')['default'];
 
 var _createClass = require('babel-runtime/helpers/create-class')['default'];
 
@@ -33067,9 +33045,9 @@ var _slicedToArray = require('babel-runtime/helpers/sliced-to-array')['default']
 
 var _Set = require('babel-runtime/core-js/set')['default'];
 
-var _Map = require('babel-runtime/core-js/map')['default'];
-
 var _Promise = require('babel-runtime/core-js/promise')['default'];
+
+var _Map = require('babel-runtime/core-js/map')['default'];
 
 var _getIterator = require('babel-runtime/core-js/get-iterator')['default'];
 
@@ -33198,7 +33176,6 @@ var FiresyncBase = (function (_EventEmitter2) {
             });
 
             var ractive = new _ractive2['default'](settings);
-            var reactiveListeners = new _Map();
 
             var domBinding = new _firesyncBindingJs.FiresyncBinding(constants.BINDING_TYPE.DOM, { ractive: ractive, settings: settings }, this);
             domBinding.updateLocal(function (property, value) {
@@ -33232,7 +33209,7 @@ var FiresyncBase = (function (_EventEmitter2) {
             });
 
             this._addBinding(domBinding);
-            return this;
+            return ractive;
         }
     }, {
         key: '_addBinding',
@@ -33391,8 +33368,8 @@ var FiresyncBase = (function (_EventEmitter2) {
         value: function _updateBindings(changes, origin) {
             var _this3 = this;
 
-            var target = arguments.length <= 2 || arguments[2] === undefined ? constants.BINDING_TARGET.ANY : arguments[2];
-            var force = arguments.length <= 3 || arguments[3] === undefined ? false : arguments[3];
+            var target = arguments[2] === undefined ? constants.BINDING_TARGET.ANY : arguments[2];
+            var force = arguments[3] === undefined ? false : arguments[3];
 
             return new _Promise(function (resolve) {
                 var bindingQueue = (0, _queue2['default'])();
@@ -33408,15 +33385,21 @@ var FiresyncBase = (function (_EventEmitter2) {
                         if (binding.type === target || target === constants.BINDING_TARGET.ANY) {
                             binding.begin(origin);
                             changes = Array.isArray(changes) ? changes : [changes];
-                            changes.forEach(function (change) {
+
+                            changes.filter(function (change) {
+                                var val = _this3[change.property];
+                                return !(val instanceof FiresyncBase);
+                            }).forEach(function (change) {
                                 var property = change.property;
                                 var value = change.value;
                                 var type = change.type;
+                                var path = change.path;
                                 var additionalData = {};
 
                                 additionalData.prevChild = change.prevChild;
                                 additionalData.origin = origin;
                                 additionalData.target = target;
+                                additionalData.path = path;
 
                                 if (origin === constants.CHANGE_ORIGIN.LOCAL) {
                                     bindingResolvedPromises.push(binding.updateForeign(property, value, type, additionalData));
@@ -33494,7 +33477,7 @@ var FiresyncBase = (function (_EventEmitter2) {
     }, {
         key: '_enumerate',
         value: _regeneratorRuntime.mark(function _enumerate() {
-            var obj = arguments.length <= 0 || arguments[0] === undefined ? this : arguments[0];
+            var obj = arguments[0] === undefined ? this : arguments[0];
             var i;
             return _regeneratorRuntime.wrap(function _enumerate$(context$2$0) {
                 while (1) switch (context$2$0.prev = context$2$0.next) {
@@ -33731,15 +33714,17 @@ exports.FiresyncBinding = FiresyncBinding;
 },{"./constants.js":82,"babel-runtime/core-js/promise":8,"babel-runtime/helpers/class-call-check":12,"babel-runtime/helpers/create-class":13,"babel-runtime/helpers/interop-require-wildcard":17}],87:[function(require,module,exports){
 'use strict';
 
-var _get = require('babel-runtime/helpers/get')['default'];
-
 var _inherits = require('babel-runtime/helpers/inherits')['default'];
+
+var _get = require('babel-runtime/helpers/get')['default'];
 
 var _createClass = require('babel-runtime/helpers/create-class')['default'];
 
 var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
 
 var _interopRequireWildcard = require('babel-runtime/helpers/interop-require-wildcard')['default'];
+
+var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
 
 Object.defineProperty(exports, '__esModule', {
     value: true
@@ -33751,6 +33736,10 @@ var _constantsJs = require('./constants.js');
 
 var constants = _interopRequireWildcard(_constantsJs);
 
+var _lodash = require('lodash');
+
+var _lodash2 = _interopRequireDefault(_lodash);
+
 /**
  * @class FiresyncObject
  * @classdesc An object which keeps its values synchronized with the remote Firebase.
@@ -33760,10 +33749,16 @@ var constants = _interopRequireWildcard(_constantsJs);
  */
 
 var FiresyncObject = (function (_FiresyncBase) {
-    function FiresyncObject(ref) {
+    function FiresyncObject(ref, defaultValues) {
+        var _this = this;
+
         _classCallCheck(this, FiresyncObject);
 
         _get(Object.getPrototypeOf(FiresyncObject.prototype), 'constructor', this).call(this, ref);
+
+        this.once('loaded', function () {
+            _lodash2['default'].defaults(_this, defaultValues);
+        });
     }
 
     _inherits(FiresyncObject, _FiresyncBase);
@@ -33819,10 +33814,10 @@ var FiresyncObject = (function (_FiresyncBase) {
     }, {
         key: '_attachBindings',
         value: function _attachBindings(firebaseBinding) {
-            var _this = this;
+            var _this2 = this;
 
             this.on('_object.observe', function (updateArgs) {
-                _get(Object.getPrototypeOf(FiresyncObject.prototype), '_updateBindings', _this).call(_this, updateArgs, constants.CHANGE_ORIGIN.LOCAL);
+                _get(Object.getPrototypeOf(FiresyncObject.prototype), '_updateBindings', _this2).call(_this2, updateArgs, constants.CHANGE_ORIGIN.LOCAL);
             });
         }
     }]);
@@ -33832,6 +33827,6 @@ var FiresyncObject = (function (_FiresyncBase) {
 
 exports.FiresyncObject = FiresyncObject;
 
-},{"./constants.js":82,"./firesyncBase.js":85,"babel-runtime/helpers/class-call-check":12,"babel-runtime/helpers/create-class":13,"babel-runtime/helpers/get":14,"babel-runtime/helpers/inherits":15,"babel-runtime/helpers/interop-require-wildcard":17}]},{},[83])(83)
+},{"./constants.js":82,"./firesyncBase.js":85,"babel-runtime/helpers/class-call-check":12,"babel-runtime/helpers/create-class":13,"babel-runtime/helpers/get":14,"babel-runtime/helpers/inherits":15,"babel-runtime/helpers/interop-require-default":16,"babel-runtime/helpers/interop-require-wildcard":17,"lodash":78}]},{},[83])(83)
 });
 //# sourceMappingURL=firesync.js.map

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+
+    <script src="http://cdn.firebase.com/js/client/2.2.7/firebase.js"></script>
+    <script src="../../dist/firesync.js"></script>
+</head>
+<body>
+    <div id="container">
+        <div id="input-container">
+        </div>
+        <div id="items-container">
+        </div>
+    </div>
+
+    <script type="text/ractive" id="input-template">
+        <input type="text" value={{item}} on-keypress="keypress"/>
+    </script>
+
+    <script type="text/ractive" id="items-template">
+        <ul>
+            {{#iterator}}
+                <li>{{text}}</li>
+            {{/iterator}}
+        </ul>
+    </script>
+</body>
+
+<script>
+    var ref = new Firebase('https://firesync-tests.firebaseio.com/users/gngeorgiev');
+
+    var user = new firesync.FiresyncObject(ref, {
+        item: ''
+    });
+
+    var userItems = new firesync.FiresyncArray(ref.child('items'));
+
+    userItems.bindTo({
+        el: '#items-container',
+        template: '#items-template'
+    });
+
+    var input = user.bindTo({
+        el: '#input-container',
+        template: '#input-template'
+    });
+
+    input.on('keypress', function (e) {
+        if (e.original.keyCode === 13) { //enter
+            userItems.add({
+                text: user.item
+            });
+
+            user.item = '';
+        }
+    });
+</script>
+
+
+</html>

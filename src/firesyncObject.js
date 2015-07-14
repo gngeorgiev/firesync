@@ -2,6 +2,7 @@
 
 import { FiresyncBase } from './firesyncBase.js';
 import * as constants from './constants.js';
+import _ from 'lodash';
 
 /**
  * @class FiresyncObject
@@ -11,8 +12,12 @@ import * as constants from './constants.js';
  * @memberof firesync
  */
 class FiresyncObject extends FiresyncBase {
-    constructor(ref) {
+    constructor(ref, defaultValues) {
         super(ref);
+
+        this.once('loaded', () => {
+            _.defaults(this, defaultValues);
+        })
     }
     
     /**

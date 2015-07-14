@@ -183,7 +183,7 @@ class FiresyncArray extends FiresyncBase {
         
         return super._updateBindings({
             property: key,
-            type: constants.CHANGE_TYPE.UPDATE,
+            type: constants.CHANGE_TYPE.UPDATE
         }, constants.CHANGE_ORIGIN.LOCAL, constants.BINDING_TARGET.FIREBASE);
     }
 
